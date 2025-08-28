@@ -3,7 +3,11 @@ node server.js
 
 npm install express cors body-parser sqlite3 nodemailer
 
+
+git status
+git add .
+git commit -m "Ajuste no server.js para abrir Login.html como index"
 git push origin main
 
 
-git commit -m 
+
