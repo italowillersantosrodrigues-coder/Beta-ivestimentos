@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Beta Investimentos</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      height: 100vh;
+      display: flex;
+      background: linear-gradient(135deg, #000000, #ffffff);
+    }
+
+    .left {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      flex-direction: column;
+      background: rgba(0,0,0,0.6);
+    }
+
+    .logo {
+      font-size: 60px;
+      font-weight: bold;
+      color: #4CAF50;
+    }
+
+    .logo-text {
+      font-size: 28px;
+      color: #fff;
+      margin-top: 10px;
+    }
+
+    .right {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .login-box {
+      background: #1e1e1e;
+      padding: 40px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 360px;
+      color: #fff;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+
+    .login-box h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      background: #2e2e2e;
+      color: white;
+    }
+
+    .login-box button {
+      width: 100%;
+      padding: 12px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 15px;
+    }
+
+    .login-box button:hover {
+      background: #45a049;
+    }
+
+    .social-login {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    .social-login button {
+      width: 48%;
+      background: #2e2e2e;
+      border: 1px solid #555;
+      color: #fff;
+      cursor: pointer;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    .social-login button:hover {
+      background: #4CAF50;
+      border-color: #4CAF50;
+    }
+
+    .options {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-top: 10px;
+      color: #aaa;
+    }
+
+    .options a {
+      color: #4CAF50;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Lado esquerdo com logo -->
+  <div class="left">
+    <div class="logo">β</div>
+    <div class="logo-text">Beta Investimentos</div>
+  </div>
+
+  <!-- Lado direito com login -->
+  <div class="right">
+    <div class="login-box">
+      <h2>Bem-vindo de volta</h2>
+      <!-- Corrigido: redireciona corretamente -->
+      <form onsubmit="window.location.href='menu.html'; return false;">
+        <input type="email" name="email" placeholder="E-mail" required>
+        <input type="password" name="senha" placeholder="Senha" required>
+        
+        <div class="options">
+          <label>
+            <input type="checkbox" name="lembrar"> Lembrar login
+          </label>
+          <a href="#">Esqueceu a senha?</a>
+        </div>
+        
+        <button type="submit">Entrar</button>
+        
+        <p style="text-align:center; margin:15px 0;">ou</p>
+        <div class="social-login">
+          <button type="button">Google</button>
+          <button type="button">Github</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

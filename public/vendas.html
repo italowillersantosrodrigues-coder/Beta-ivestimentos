@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cadastro de Vendas</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI", Tahoma, sans-serif }
+    body { background:#f5f7fa; display:flex; flex-direction:column; align-items:center; min-height:100vh }
+    .navbar { width:100%; background:#2d3748; padding:15px 20px; display:flex; justify-content:flex-start; align-items:center; box-shadow:0 2px 10px rgba(0,0,0,.1) }
+    .navbar button { background:#4a90e2; color:#fff; border:0; border-radius:6px; padding:10px 18px; font-size:15px; cursor:pointer; transition:.3s }
+    .navbar button:hover { background:#357abd }
+    .container { background:#fff; padding:25px 30px; border-radius:15px; box-shadow:0 8px 20px rgba(0,0,0,.1); width:100%; max-width:900px; margin-top:30px }
+    h1 { font-size:26px; margin-bottom:20px; color:#2d3748; text-align:center }
+    form { display:flex; flex-direction:column; gap:14px; margin-bottom:18px }
+    label { color:#2d3748; font-weight:600 }
+    select,input,textarea { padding:12px; border:1px solid #ccc; border-radius:8px; font-size:15px }
+    input:focus,select:focus,textarea:focus { border-color:#4a90e2; outline:0; box-shadow:0 0 5px rgba(74,144,226,.4) }
+    button { padding:12px 20px; background:#4a90e2; color:#fff; border:0; border-radius:8px; cursor:pointer; font-size:15px; transition:.3s }
+    button:hover { background:#357abd }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:12px }
+    .produto-item { display:grid; grid-template-columns:2fr .8fr auto; gap:10px; align-items:center }
+    .pill { background:#edf2f7; padding:6px 10px; border-radius:999px; font-size:12px; display:inline-block }
+    .hidden { display:none !important }
+    table { width:100%; border-collapse:collapse; margin-top:14px }
+    th, td { border-bottom:1px solid #eee; text-align:left; padding:10px }
+    .actions { display:flex; gap:8px }
+    .success { color:#0a7b32; }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <button onclick="window.location.href='menu.html'">⬅ Voltar ao Menu</button>
+  </div>
+
+  <div class="container">
+    <h1>Cadastro de Vendas</h1>
+
+    <form id="formVenda">
+      <label>Cliente</label>
+      <select id="clienteSelect" required></select>
+
+      <label>Produtos</label>
+      <div id="listaProdutosVenda"></div>
+      <button type="button" onclick="adicionarProduto()">+ Adicionar Produto</button>
+
+      <div class="row">
+        <div>
+          <label>Método de Pagamento</label>
+          <select id="metodoPagamento" required>
+            <option value="">Selecione</option>
+            <option value="pix">Pix</option>
+            <option value="cartao">Cartão</option>
+            <option value="dinheiro">Dinheiro</option>
+            <option value="carne">Carnê</option>
+          </select>
+        </div>
+        <div>
+          <label>Data da Compra</label>
+          <input type="date" id="dataCompra" required />
+        </div>
+      </div>
+
+      <div id="grupoCarne" class="hidden">
+        <div class="row">
+          <div>
+            <label>Quantidade de Parcelas</label>
+            <input type="number" id="qtdParcelas" min="1" placeholder="ex.: 6" />
+          </div>
+          <div>
+            <label>Valor de cada Parcela (R$)</label>
+            <input type="number" id="valorParcela" step="0.01" min="0" placeholder="ex.: 150.00" />
+          </div>
+        </div>
+        <label>Vencimento da 1ª Parcela</label>
+        <input type="date" id="primeiroVencimento" />
+        <span class="pill">As próximas vencem mês a mês na mesma data.</span>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Vencimento (à vista / cartão / pix)</label>
+          <input type="date" id="vencimento" />
+        </div>
+        <div>
+          <label>Total da Venda</label>
+          <input type="text" id="totalVenda" readonly />
+        </div>
+      </div>
+
+      <button type="submit">Cadastrar Venda</button>
+    </form>
+
+    <div id="boxObrigado" class="hidden">
+      <h2>Mensagem de Agradecimento <span class="pill">padrão</span></h2>
+      <p id="previewObrigado"></p>
+      <div class="actions" style="margin-top:8px">
+        <button id="btnWaObrigado">Enviar no WhatsApp</button>
+        <button id="btnMailObrigado">Enviar no Gmail</button>
+      </div>
+      <p class="success" id="msgEnvioOk"></p>
+    </div>
+
+    <div id="monitorCarne" class="hidden">
+      <h2>Monitoramento do Carnê</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Vencimento</th><th>Valor (R$)</th><th>Status</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyParcelas"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // ------- Estado -------
+    let produtosCache = [];
+    let ultimaVenda = null; // resposta do backend da última venda cadastrada
+
+    // ------- Utilidades -------
+    const BRL = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const fmtISO = d => d.toISOString().slice(0,10);
+    const addMonths = (date, m) => {
+      const d = new Date(date);
+      d.setMonth(d.getMonth() + m);
+      // Ajusta para último dia válido do mês se necessário
+      if (d.getDate() !== new Date(date).getDate()) d.setDate(0);
+      return d;
+    };
+
+    // ------- Carregamentos -------
+    async function carregarClientes() {
+      const resp = await fetch("/api/clientes");
+      const clientes = await resp.json();
+      const sel = document.getElementById("clienteSelect");
+      sel.innerHTML = "<option value=''>Selecione um cliente</option>";
+      clientes.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.nome;
+        sel.appendChild(opt);
+      });
+    }
+
+    async function carregarProdutos() {
+      const resp = await fetch("/api/produtos");
+      produtosCache = await resp.json();
+    }
+
+    // ------- Produtos -------
+    function adicionarProduto() {
+      const div = document.createElement("div");
+      div.className = "produto-item";
+
+      const sel = document.createElement("select");
+      produtosCache.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = `${p.nome} — ${BRL(p.preco)}`;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', atualizarTotal);
+
+      const qtd = document.createElement("input");
+      qtd.type = "number";
+      qtd.min = 1;
+      qtd.value = 1;
+      qtd.placeholder = "Qtd";
+      qtd.addEventListener('input', atualizarTotal);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "Remover";
+      btn.onclick = () => { div.remove(); atualizarTotal(); };
+
+      div.appendChild(sel);
+      div.appendChild(qtd);
+      div.appendChild(btn);
+
+      document.getElementById("listaProdutosVenda").appendChild(div);
+      atualizarTotal();
+    }
+
+    function atualizarTotal() {
+      let total = 0;
+      document.querySelectorAll(".produto-item").forEach(div => {
+        const produto_id = div.querySelector("select").value;
+        const qtd = parseInt(div.querySelector("input").value) || 1;
+        const prod = produtosCache.find(p => p.id == produto_id);
+        if (prod) total += prod.preco * qtd;
+      });
+      document.getElementById("totalVenda").value = BRL(total);
+      // Se for carnê e não preencheu valor, sugere valor da parcela
+      const metodo = document.getElementById("metodoPagamento").value;
+      if (metodo === 'carne') {
+        const q = parseInt(document.getElementById("qtdParcelas").value);
+        if (q > 0) document.getElementById("valorParcela").value = (total / q).toFixed(2);
+      }
+    }
+
+    // ------- Evento método pagamento -------
+    document.addEventListener("change", (e)=>{
+      if (e.target.id === "metodoPagamento") {
+        const showCarne = e.target.value === "carne";
+        document.getElementById("grupoCarne").classList.toggle("hidden", !showCarne);
+      }
+    });
+
+    // ------- Datas padrão -------
+    (function initDates(){
+      const hoje = new Date();
+      document.getElementById("dataCompra").value = fmtISO(hoje);
+      document.getElementById("vencimento").value = fmtISO(addMonths(hoje,0));
+      document.getElementById("primeiroVencimento").value = fmtISO(addMonths(hoje,1));
+    })();
+
+    // ------- Submit -------
+    document.getElementById("formVenda").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const cliente_id = document.getElementById("clienteSelect").value;
+      const metodo_pagamento = document.getElementById("metodoPagamento").value;
+      const data_compra = document.getElementById("dataCompra").value;
+      const vencimento = document.getElementById("vencimento").value;
+
+      const itens = [];
+      document.querySelectorAll(".produto-item").forEach(div => {
+        const produto_id = parseInt(div.querySelector("select").value);
+        const quantidade = parseInt(div.querySelector("input").value) || 1;
+        const produto = produtosCache.find(p => p.id == produto_id);
+        if (produto) itens.push({ produto_id, quantidade, preco_unitario: produto.preco });
+      });
+      if (itens.length === 0) return alert("Adicione pelo menos 1 produto.");
+
+      // Dados do carnê, se for o caso
+      let carne = null;
+      if (metodo_pagamento === "carne") {
+        const qtdParcelas = parseInt(document.getElementById("qtdParcelas").value);
+        const valorParcela = parseFloat(document.getElementById("valorParcela").value);
+        const primeiroVencimento = document.getElementById("primeiroVencimento").value;
+        if (!qtdParcelas || !valorParcela || !primeiroVencimento) {
+          return alert("Preencha qtd. de parcelas, valor por parcela e 1º vencimento.");
+        }
+        carne = { qtdParcelas, valorParcela, primeiroVencimento };
+      }
+
+      const resp = await fetch("/api/vendas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cliente_id, itens, vencimento, metodo_pagamento, data_compra, carne })
+      });
+      if (!resp.ok) {
+        const ejson = await resp.json().catch(()=>({error:'Erro'}));
+        return alert("Erro ao salvar: " + (ejson.error||resp.statusText));
+      }
+      ultimaVenda = await resp.json();
+
+      // Prepara/mostra mensagem de agradecimento
+      await mostrarAgradecimento(ultimaVenda);
+
+      // Se for carnê, carrega monitoramento
+      if (ultimaVenda.metodo_pagamento === "carne") {
+        carregarParcelas(ultimaVenda.vendaId);
+        document.getElementById("monitorCarne").classList.remove("hidden");
+      } else {
+        document.getElementById("monitorCarne").classList.add("hidden");
+      }
+
+      // Limpa itens, mas mantém cliente para facilitar próximos lançamentos
+      document.getElementById("listaProdutosVenda").innerHTML = "";
+      document.getElementById("totalVenda").value = "";
+    });
+
+    // ------- Agradecimento -------
+    async function mostrarAgradecimento(venda) {
+      const clienteSel = document.getElementById("clienteSelect");
+      const nome = clienteSel.options[clienteSel.selectedIndex]?.text || "Cliente";
+      const texto = `Olá ${nome}! Obrigado pela compra realizada em ${new Date(venda.data_compra).toLocaleDateString('pt-BR')}.
+O valor total foi de ${BRL(venda.total)}. Sua garantia é de 3 meses a partir da data da compra.
+Qualquer dúvida, estamos à disposição.`;
+      document.getElementById("previewObrigado").textContent = texto;
+      document.getElementById("boxObrigado").classList.remove("hidden");
+
+      const waText = encodeURIComponent(texto);
+      document.getElementById("btnWaObrigado").onclick = () => window.open(`https://wa.me/?text=${waText}`,'_blank');
+      document.getElementById("btnMailObrigado").onclick = () => window.open(`mailto:?subject=Obrigado pela sua compra&body=${waText}`,'_blank');
+      document.getElementById("msgEnvioOk").textContent = "";
+    }
+
+    // ------- Monitoramento do carnê -------
+    async function carregarParcelas(vendaId) {
+      const resp = await fetch(`/api/parcelas?venda_id=${vendaId}`);
+      const parcelas = await resp.json();
+      const tb = document.getElementById("tbodyParcelas");
+      tb.innerHTML = "";
+      const clienteSel = document.getElementById("clienteSelect");
+      const nome = clienteSel.options[clienteSel.selectedIndex]?.text || "Cliente";
+
+      parcelas.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.num_parcela}/${p.qtd_total}</td>
+          <td>${new Date(p.vencimento).toLocaleDateString('pt-BR')}</td>
+          <td>${BRL(p.valor)}</td>
+          <td>${p.status}</td>
+          <td class="actions">
+            <button type="button" data-wa>WhatsApp</button>
+            <button type="button" data-mail>Gmail</button>
+          </td>`;
+        // Mensagem da parcela
+        const msg = `Olá ${nome}, lembrando que a parcela ${p.num_parcela}/${p.qtd_total} do seu carnê, no valor de ${BRL(p.valor)}, vence em ${new Date(p.vencimento).toLocaleDateString('pt-BR')}.`;
+        const wa = encodeURIComponent(msg);
+        tr.querySelector("[data-wa]").onclick = () => window.open(`https://wa.me/?text=${wa}`,'_blank');
+        tr.querySelector("[data-mail]").onclick = () => window.open(`mailto:?subject=Lembrete de parcela&body=${wa}`,'_blank');
+        tb.appendChild(tr);
+      });
+    }
+
+    // ------- Bootstrap -------
+    carregarClientes();
+    carregarProdutos();
+  </script>
+</body>
+</html>

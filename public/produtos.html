@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastro de Produtos</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", Tahoma, sans-serif; }
+    body { background: #f5f7fa; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    
+    .navbar {
+      width: 100%; background: #2d3748; padding: 15px 20px;
+      display: flex; justify-content: flex-start; align-items: center;
+      box-shadow: 0px 2px 10px rgba(0,0,0,0.1);
+    }
+    .navbar button {
+      background: #4a90e2; color: white; border: none; border-radius: 6px;
+      padding: 10px 18px; font-size: 15px; cursor: pointer; transition: 0.3s;
+    }
+    .navbar button:hover { background: #357abd; }
+
+    .container {
+      background: #fff; padding: 25px 30px; border-radius: 15px;
+      box-shadow: 0px 8px 20px rgba(0,0,0,0.1);
+      width: 100%; max-width: 750px; margin-top: 30px;
+    }
+    h1 { font-size: 26px; margin-bottom: 20px; color: #2d3748; text-align: center; }
+
+    form {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; justify-content: center;
+    }
+    input {
+      flex: 1 1 200px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; transition: 0.3s;
+    }
+    input:focus {
+      border-color: #4a90e2; outline: none; box-shadow: 0 0 5px rgba(74,144,226,0.4);
+    }
+    button {
+      padding: 12px 20px; background: #4a90e2; color: white;
+      border: none; border-radius: 8px; cursor: pointer; font-size: 15px; transition: 0.3s;
+    }
+    button:hover { background: #357abd; }
+
+    h2 { margin-bottom: 15px; color: #2d3748; }
+    ul { list-style: none; padding: 0; }
+
+    li {
+      padding: 12px 15px; background: #f9fafb; border: 1px solid #e2e8f0; border-radius: 8px;
+      margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;
+    }
+    li:hover { background: #edf2f7; }
+
+    .produto-info { font-size: 15px; color: #2d3748; display: flex; align-items: center; gap: 15px; }
+    .produto-info img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #ccc; }
+
+    .actions { display: flex; gap: 10px; }
+    .btn-small {
+      padding: 6px 12px; font-size: 13px; border: none; border-radius: 6px;
+      cursor: pointer; transition: 0.3s;
+    }
+    .btn-edit { background: #f6ad55; color: #fff; }
+    .btn-edit:hover { background: #dd6b20; }
+    .btn-delete { background: #e53e3e; color: #fff; }
+    .btn-delete:hover { background: #c53030; }
+  </style>
+</head>
+<body>
+  <!-- Barra de navegação -->
+  <div class="navbar">
+    <button onclick="window.location.href='menu.html'">⬅ Voltar ao Menu</button>
+  </div>
+
+  <!-- Conteúdo -->
+  <div class="container">
+    <h1>Cadastro de Produtos</h1>
+
+    <form id="formProduto" enctype="multipart/form-data">
+      <input type="hidden" id="produtoId"> <!-- usado para edição -->
+      <input type="text" id="nome" placeholder="Nome do Produto" required>
+      <input type="number" step="0.01" id="preco" placeholder="Preço" required>
+      <input type="number" id="desconto" placeholder="Desconto (%)" min="0" max="100">
+      <input type="number" id="estoque" placeholder="Estoque inicial">
+      <input type="file" id="foto" name="foto" accept="image/*">
+      <button type="submit">Cadastrar</button>
+    </form>
+
+    <h2>Lista de Produtos</h2>
+    <ul id="listaProdutos"></ul>
+  </div>
+
+  <script>
+    async function carregarProdutos() {
+      const resp = await fetch("/api/produtos");
+      const produtos = await resp.json();
+      const ul = document.getElementById("listaProdutos");
+      ul.innerHTML = "";
+      produtos.forEach(p => {
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "produto-info";
+
+        // foto
+        const img = document.createElement("img");
+        img.src = p.foto || "https://via.placeholder.com/60x60?text=Foto";
+
+        const details = document.createElement("div");
+        const precoFinal = p.desconto ? (p.preco - (p.preco * p.desconto / 100)).toFixed(2) : p.preco.toFixed(2);
+        details.innerHTML = `
+          <strong>${p.nome}</strong><br>
+          Preço: R$ ${p.preco.toFixed(2)}<br>
+          ${p.desconto ? `<span style="color:green;">Desconto: ${p.desconto}% → R$ ${precoFinal}</span><br>` : ""}
+          Estoque: ${p.estoque}
+        `;
+
+        info.appendChild(img);
+        info.appendChild(details);
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        // Botão editar
+        const btnEdit = document.createElement("button");
+        btnEdit.className = "btn-small btn-edit";
+        btnEdit.textContent = "Editar";
+        btnEdit.onclick = () => preencherFormulario(p);
+
+        // Botão excluir
+        const btnDelete = document.createElement("button");
+        btnDelete.className = "btn-small btn-delete";
+        btnDelete.textContent = "Excluir";
+        btnDelete.onclick = () => excluirProduto(p.id);
+
+        actions.appendChild(btnEdit);
+        actions.appendChild(btnDelete);
+
+        li.appendChild(info);
+        li.appendChild(actions);
+        ul.appendChild(li);
+      });
+    }
+
+    function preencherFormulario(produto) {
+      document.getElementById("produtoId").value = produto.id;
+      document.getElementById("nome").value = produto.nome;
+      document.getElementById("preco").value = produto.preco;
+      document.getElementById("desconto").value = produto.desconto || 0;
+      document.getElementById("estoque").value = produto.estoque;
+      document.getElementById("foto").value = produto.foto || "";
+      document.querySelector("#formProduto button").textContent = "Salvar Alterações";
+    }
+
+    async function excluirProduto(id) {
+      if (confirm("Deseja realmente excluir este produto?")) {
+        await fetch(`/api/produtos/${id}`, { method: "DELETE" });
+        carregarProdutos();
+      }
+    }
+
+    document.getElementById("formProduto").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("produtoId").value;
+      const nome = document.getElementById("nome").value;
+      const preco = parseFloat(document.getElementById("preco").value);
+      const desconto = parseInt(document.getElementById("desconto").value) || 0;
+      const estoque = parseInt(document.getElementById("estoque").value) || 0;
+      const foto = document.getElementById("foto").value;
+
+      if (id) {
+        // Atualizar produto
+        await fetch(`/api/produtos/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome, preco, desconto, estoque, foto })
+        });
+      } else {
+        // Criar novo produto
+        await fetch("/api/produtos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome, preco, desconto, estoque, foto })
+        });
+      }
+
+      document.getElementById("formProduto").reset();
+      document.getElementById("produtoId").value = "";
+      document.querySelector("#formProduto button").textContent = "Cadastrar";
+      carregarProdutos();
+    });
+
+    carregarProdutos();
+  </script>
+</body>
+</html>

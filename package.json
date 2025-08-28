@@ -1,0 +1,19 @@
+{
+  "name": "minha-loja",
+  "version": "1.0.0",
+  "description": "Sistema simples de loja: clientes, estoque, vendas e emails automáticos",
+  "main": "server.js",
+  "scripts": {
+    "init-db": "node init-db.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^2.0.2",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.10.1",
+    "sqlite3": "^5.1.7"
+  }
+}

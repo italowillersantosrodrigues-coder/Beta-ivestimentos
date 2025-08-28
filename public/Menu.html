@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Menu - Beta Investimentos</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #111, #444);
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+    }
+
+    .menu-container {
+      background: #1e1e1e;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+      text-align: center;
+      width: 400px;
+      animation: fadeIn 0.8s ease-in-out;
+    }
+
+    .menu-container h1 {
+      margin-bottom: 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .menu-btn {
+      background: #2c2c2c;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, background 0.3s ease;
+    }
+
+    .menu-btn i {
+      font-size: 26px;
+      margin-bottom: 8px;
+      color: #4caf50; /* verde igual botão do login */
+    }
+
+    .menu-btn:hover {
+      background: #4caf50;
+      transform: translateY(-5px);
+      color: #fff;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="menu-container">
+    <h1>📌 Menu Principal</h1>
+    <div class="menu-grid">
+      <button class="menu-btn" onclick="window.location.href='clientes.html'">
+        <i class="fas fa-users"></i>
+        Clientes
+      </button>
+      <button class="menu-btn" onclick="window.location.href='produtos.html'">
+        <i class="fas fa-box-open"></i>
+        Produtos
+      </button>
+      <button class="menu-btn" onclick="window.location.href='vendas.html'">
+        <i class="fas fa-cash-register"></i>
+        Vendas
+      </button>
+      <button class="menu-btn" onclick="window.location.href='login.html'">
+        <i class="fas fa-sign-out-alt"></i>
+        Sair
+      </button>
+    </div>
+  </div>
+</body>
+</html>

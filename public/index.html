@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Sistema Minha Loja - Demo</title>
+  <style>
+    /* Reset e estilo base */
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f6fa;
+      color: #2d3748;
+    }
+
+    /* Navbar */
+    .navbar {
+      background: #4a90e2;
+      color: #fff;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .navbar h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .btn-voltar {
+      background: #fff;
+      color: #4a90e2;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.3s;
+    }
+    .btn-voltar:hover {
+      background: #e2e8f0;
+    }
+
+    /* Conteúdo */
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    h2, h3 {
+      margin-top: 0;
+      color: #2d3748;
+    }
+
+    /* Card */
+    .card {
+      background: #fff;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+
+    /* Inputs e selects */
+    input, select {
+      padding: 10px;
+      margin: 6px 0;
+      width: 100%;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: #4a90e2;
+      outline: none;
+      box-shadow: 0 0 4px rgba(74,144,226,0.4);
+    }
+
+    /* Botões */
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.3s;
+    }
+    button:hover { opacity: 0.9; }
+    .btn-primary { background: #4a90e2; color: #fff; }
+    .btn-danger { background: #e53e3e; color: #fff; }
+    .btn-warning { background: #f6ad55; color: #fff; }
+    .btn-secondary { background: #718096; color: #fff; }
+
+    /* Layout flex */
+    .row { display:flex; gap:10px; flex-wrap: wrap; }
+    .col { flex:1; min-width:200px; }
+
+    /* Itens da venda */
+    #itensVenda > div {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0;
+      flex-wrap: wrap;
+    }
+    #itensVenda select, #itensVenda input {
+      flex: 1;
+    }
+    #itensVenda button {
+      flex-shrink: 0;
+    }
+
+    /* Mensagens */
+    .msg { margin-top: 8px; font-size: 13px; }
+    .msg.ok { color: #2f855a; }
+    .msg.error { color: #e53e3e; }
+
+    pre {
+      background: #edf2f7;
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <div class="navbar">
+    <h1>Minha Loja — Demo</h1>
+    <button onclick="window.location.href='menu.html'" class="btn-voltar">⬅ Voltar ao Menu</button>
+  </div>
+
+  <!-- Conteúdo -->
+  <div class="container">
+    <div class="card">
+      <h3>Cadastrar Cliente</h3>
+      <input id="c_nome" placeholder="Nome">
+      <input id="c_email" placeholder="Email">
+      <input id="c_tel" placeholder="Telefone">
+      <button class="btn-primary" onclick="cadastrarCliente()">Salvar Cliente</button>
+      <div id="msgCliente" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h3>Cadastrar Produto</h3>
+      <input id="p_nome" placeholder="Nome do produto">
+      <input id="p_preco" placeholder="Preço (ex: 10.50)">
+      <input id="p_estoque" placeholder="Estoque inicial (ex: 10)">
+      <button class="btn-primary" onclick="cadastrarProduto()">Salvar Produto</button>
+      <div id="msgProduto" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h3>Fazer Venda</h3>
+      <div class="row">
+        <div class="col">
+          <label>Cliente</label>
+          <select id="v_cliente"></select>
+        </div>
+        <div class="col">
+          <label>Vencimento (opcional)</label>
+          <input type="date" id="v_vencimento">
+        </div>
+      </div>
+
+      <div id="itensVenda"></div>
+      <button class="btn-secondary" onclick="adicionarItem()">Adicionar Item</button>
+      <button class="btn-primary" onclick="salvarVenda()">Concluir Venda</button>
+      <div id="msgVenda" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h3>Relatórios Rápidos</h3>
+      <button class="btn-warning" onclick="carregarRelatorios()">Atualizar Relatórios</button>
+      <pre id="relatorios"></pre>
+    </div>
+  </div>
+
+<script>
+// utilidade fetch curta
+async function api(path, method='GET', body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch('/api' + path, opts);
+  return res.json();
+}
+
+// carregar clientes e produtos para selects
+async function carregarDados() {
+  const clientes = await api('/clientes');
+  const sel = document.getElementById('v_cliente');
+  sel.innerHTML = '<option value="">(Sem cliente)</option>';
+  clientes.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id;
+    o.textContent = c.nome + ' — ' + (c.email || '');
+    sel.appendChild(o);
+  });
+
+  const produtos = await api('/produtos');
+  window._produtos = produtos; // cache global para usar nos selects
+}
+carregarDados();
+
+// cadastrar cliente
+async function cadastrarCliente() {
+  const nome = document.getElementById('c_nome').value;
+  const email = document.getElementById('c_email').value;
+  const telefone = document.getElementById('c_tel').value;
+  const r = await api('/clientes', 'POST', { nome, email, telefone });
+  document.getElementById('msgCliente').innerText = r.error ? 'Erro: '+r.error : 'Cliente cadastrado com id ' + r.id;
+  document.getElementById('msgCliente').className = r.error ? 'msg error' : 'msg ok';
+  await carregarDados();
+}
+
+// cadastrar produto
+async function cadastrarProduto() {
+  const nome = document.getElementById('p_nome').value;
+  const preco = parseFloat(document.getElementById('p_preco').value);
+  const estoque = parseInt(document.getElementById('p_estoque').value) || 0;
+  const r = await api('/produtos', 'POST', { nome, preco, estoque });
+  document.getElementById('msgProduto').innerText = r.error ? 'Erro: '+r.error : 'Produto cadastrado com id ' + r.id;
+  document.getElementById('msgProduto').className = r.error ? 'msg error' : 'msg ok';
+  await carregarDados();
+}
+
+// venda — itens dinâmicos
+function adicionarItem() {
+  if (!window._produtos || window._produtos.length === 0) { alert('Cadastre produtos primeiro'); return; }
+  const cont = document.getElementById('itensVenda');
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <select class="selProduto">${window._produtos.map(p=>`<option value="${p.id}" data-preco="${p.preco}">${p.nome} (R$ ${p.preco}) - estoque:${p.estoque}</option>`).join('')}</select>
+    <input type="number" class="qtd" value="1" min="1" style="max-width:80px">
+    <input type="number" class="preco" value="${window._produtos[0]?.preco || 0}" step="0.01" style="max-width:120px">
+    <button class="btn-danger" onclick="this.parentNode.remove()">Remover</button>
+  `;
+  cont.appendChild(div);
+}
+
+async function salvarVenda() {
+  const clienteId = document.getElementById('v_cliente').value || null;
+  const vencimento = document.getElementById('v_vencimento').value || null;
+  const cont = document.getElementById('itensVenda');
+  const selects = cont.querySelectorAll('.selProduto');
+  if (selects.length === 0) { alert('Adicione pelo menos um item'); return; }
+  const itens = [];
+  for (const sel of selects) {
+    const prId = Number(sel.value);
+    const precoEl = sel.parentNode.querySelector('.preco');
+    const qtdEl = sel.parentNode.querySelector('.qtd');
+    const preco = parseFloat(precoEl.value);
+    const qtd = parseInt(qtdEl.value);
+    itens.push({ produto_id: prId, quantidade: qtd, preco_unitario: preco });
+  }
+  const r = await api('/vendas', 'POST', { cliente_id: clienteId ? Number(clienteId) : null, itens, vencimento });
+  document.getElementById('msgVenda').innerText = r.error ? 'Erro: '+r.error : `Venda registrada: id ${r.vendaId} total R$ ${r.total.toFixed(2)}`;
+  document.getElementById('msgVenda').className = r.error ? 'msg error' : 'msg ok';
+  document.getElementById('itensVenda').innerHTML = '';
+  await carregarDados(); // atualiza estoque exibido
+}
+
+// relatórios
+async function carregarRelatorios() {
+  const r = await api('/relatorios/lucros');
+  document.getElementById('relatorios').textContent = JSON.stringify(r, null, 2);
+}
+</script>
+</body>
+</html>

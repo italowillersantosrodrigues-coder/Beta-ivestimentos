@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastro de Clientes</title>
+  <style>
+    /* Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", Tahoma, sans-serif; }
+    body { background: #f5f7fa; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    
+    .navbar {
+      width: 100%; background: #2d3748; padding: 15px 20px;
+      display: flex; justify-content: flex-start; align-items: center;
+      box-shadow: 0px 2px 10px rgba(0,0,0,0.1);
+    }
+    .navbar button {
+      background: #4a90e2; color: white; border: none; border-radius: 6px;
+      padding: 10px 18px; font-size: 15px; cursor: pointer; transition: 0.3s;
+    }
+    .navbar button:hover { background: #357abd; }
+
+    .container {
+      background: #fff; padding: 25px 30px; border-radius: 15px;
+      box-shadow: 0px 8px 20px rgba(0,0,0,0.1);
+      width: 100%; max-width: 700px; margin-top: 30px;
+    }
+    h1 { font-size: 26px; margin-bottom: 20px; color: #2d3748; text-align: center; }
+
+    form {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; justify-content: center;
+    }
+    input {
+      flex: 1 1 200px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; transition: 0.3s;
+    }
+    input:focus {
+      border-color: #4a90e2; outline: none; box-shadow: 0 0 5px rgba(74,144,226,0.4);
+    }
+    button {
+      padding: 12px 20px; background: #4a90e2; color: white;
+      border: none; border-radius: 8px; cursor: pointer; font-size: 15px; transition: 0.3s;
+    }
+    button:hover { background: #357abd; }
+
+    h2 { margin-bottom: 15px; color: #2d3748; }
+    ul { list-style: none; padding: 0; }
+
+    li {
+      padding: 12px 15px; background: #f9fafb; border: 1px solid #e2e8f0; border-radius: 8px;
+      margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;
+    }
+    li:hover { background: #edf2f7; }
+
+    .cliente-info { font-size: 15px; color: #2d3748; }
+    .actions { display: flex; gap: 10px; }
+    .btn-small {
+      padding: 6px 12px; font-size: 13px; border: none; border-radius: 6px;
+      cursor: pointer; transition: 0.3s;
+    }
+    .btn-edit { background: #f6ad55; color: #fff; }
+    .btn-edit:hover { background: #dd6b20; }
+    .btn-delete { background: #e53e3e; color: #fff; }
+    .btn-delete:hover { background: #c53030; }
+  </style>
+</head>
+<body>
+  <!-- Barra de navegação -->
+  <div class="navbar">
+    <button onclick="window.location.href='menu.html'">⬅ Voltar ao Menu</button>
+  </div>
+
+  <!-- Conteúdo -->
+  <div class="container">
+    <h1>Cadastro de Clientes</h1>
+
+    <form id="formCliente">
+      <input type="hidden" id="clienteId"> <!-- usado para edição -->
+      <input type="text" id="nome" placeholder="Nome" required>
+      <input type="email" id="email" placeholder="Email" required>
+      <input type="text" id="telefone" placeholder="Telefone">
+      <button type="submit">Cadastrar</button>
+    </form>
+
+    <h2>Lista de Clientes</h2>
+    <ul id="listaClientes"></ul>
+  </div>
+
+  <script>
+    async function carregarClientes() {
+      const resp = await fetch("/api/clientes");
+      const clientes = await resp.json();
+      const ul = document.getElementById("listaClientes");
+      ul.innerHTML = "";
+      clientes.forEach(c => {
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "cliente-info";
+        info.textContent = `${c.nome} (${c.email}) - ${c.telefone}`;
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        // Botão editar
+        const btnEdit = document.createElement("button");
+        btnEdit.className = "btn-small btn-edit";
+        btnEdit.textContent = "Editar";
+        btnEdit.onclick = () => preencherFormulario(c);
+
+        // Botão excluir
+        const btnDelete = document.createElement("button");
+        btnDelete.className = "btn-small btn-delete";
+        btnDelete.textContent = "Excluir";
+        btnDelete.onclick = () => excluirCliente(c.id);
+
+        actions.appendChild(btnEdit);
+        actions.appendChild(btnDelete);
+
+        li.appendChild(info);
+        li.appendChild(actions);
+        ul.appendChild(li);
+      });
+    }
+
+    function preencherFormulario(cliente) {
+      document.getElementById("clienteId").value = cliente.id;
+      document.getElementById("nome").value = cliente.nome;
+      document.getElementById("email").value = cliente.email;
+      document.getElementById("telefone").value = cliente.telefone;
+      document.querySelector("#formCliente button").textContent = "Salvar Alterações";
+    }
+
+    async function excluirCliente(id) {
+      if (confirm("Deseja realmente excluir este cliente?")) {
+        await fetch(`/api/clientes/${id}`, { method: "DELETE" });
+        carregarClientes();
+      }
+    }
+
+    document.getElementById("formCliente").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("clienteId").value;
+      const nome = document.getElementById("nome").value;
+      const email = document.getElementById("email").value;
+      const telefone = document.getElementById("telefone").value;
+
+      if (id) {
+        // Atualizar cliente
+        await fetch(`/api/clientes/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome, email, telefone })
+        });
+      } else {
+        // Criar novo cliente
+        await fetch("/api/clientes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome, email, telefone })
+        });
+      }
+
+      document.getElementById("formCliente").reset();
+      document.getElementById("clienteId").value = "";
+      document.querySelector("#formCliente button").textContent = "Cadastrar";
+      carregarClientes();
+    });
+
+    carregarClientes();
+  </script>
+</body>
+</html>
