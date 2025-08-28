@@ -14,6 +14,11 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public"))); // coloque seus HTML em ./public
 
+// >>> Força "/" a abrir Login.html em vez de index.html
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "Login.html"));
+});
+
 // ----------------- Banco (SQLite) -----------------
 const DB_FILE = path.join(__dirname, "loja.db");
 const db = new sqlite3.Database(DB_FILE);
@@ -87,9 +92,6 @@ function createTables() {
 createTables();
 
 // ----------------- Nodemailer (Gmail) -----------------
-// Recomendo usar variáveis de ambiente:
-// GMAIL_USER=betainvestimentos34@gmail.com
-// GMAIL_PASS=senha_de_aplicativo (gerada no Google Account -> Segurança -> Senhas de app)
 const GMAIL_USER = process.env.GMAIL_USER || "betainvestimentos34@gmail.com";
 const GMAIL_PASS = process.env.GMAIL_PASS || ""; // **use senha de app**, NÃO sua senha normal
 
@@ -100,7 +102,6 @@ if (GMAIL_USER && GMAIL_PASS) {
     auth: { user: GMAIL_USER, pass: GMAIL_PASS }
   });
 } else {
-  // fallback (ex.: outro SMTP definido por env)
   const smtpHost  = process.env.SMTP_HOST || "smtp.example.com";
   const smtpPort  = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
   const smtpUser  = process.env.SMTP_USER || "user@example.com";
@@ -125,7 +126,6 @@ app.post("/api/clientes", (req, res) => {
   const sql = "INSERT INTO clientes (nome, email, telefone) VALUES (?,?,?)";
   db.run(sql, [nome, email, telefone || ""], function(err) {
     if (err) {
-      // se email duplicado, retorna update possível
       if (err.message && err.message.includes("UNIQUE constraint failed")) {
         return res.status(409).json({ error: "Cliente com este email já existe." });
       }
@@ -194,14 +194,12 @@ app.post("/api/vendas", async (req, res) => {
       return res.status(400).json({ error: "Itens da venda são obrigatórios." });
     }
 
-    // calcular total
     let total = 0, lucro = 0;
     itens.forEach(it => {
       total += (Number(it.preco_unitario) || 0) * (Number(it.quantidade) || 0);
       lucro += (Number(it.preco_unitario) || 0) * (Number(it.quantidade) || 0);
     });
 
-    // garante data_compra em ISO (YYYY-MM-DD)
     const dataCompraIso = data_compra ? (new Date(data_compra)).toISOString().slice(0,10) : (new Date()).toISOString().slice(0,10);
 
     db.run(
@@ -211,7 +209,6 @@ app.post("/api/vendas", async (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         const vendaId = this.lastID;
 
-        // inserir itens e reduzir estoque
         const insertItem = db.prepare("INSERT INTO venda_itens (venda_id, produto_id, quantidade, preco_unitario) VALUES (?,?,?,?)");
         for (const it of itens) {
           insertItem.run([vendaId, it.produto_id, it.quantidade, it.preco_unitario]);
@@ -219,7 +216,6 @@ app.post("/api/vendas", async (req, res) => {
         }
         insertItem.finalize();
 
-        // se carnê, gerar parcelas (se carne object presente)
         if (metodo_pagamento === 'carne' && carne) {
           const qtd = Number(carne.qtdParcelas);
           const valorParcela = Number(carne.valorParcela);
@@ -232,7 +228,6 @@ app.post("/api/vendas", async (req, res) => {
           }
         }
 
-        // envia email de confirmação se cliente com email
         if (cliente_id) {
           db.get("SELECT email, nome FROM clientes WHERE id = ?", [cliente_id], (e, cliente) => {
             if (!e && cliente && cliente.email) {
@@ -286,18 +281,11 @@ app.post("/api/parcelas/:id/pagar", (req, res) => {
   });
 });
 
-// ----------------- NOVA ROTA: LEADS (via Google Sign-in) -----------------
-/**
- * POST /api/leads
- * body: { google_id?, nome, email, picture?, telefone? }
- * - salva lead (ou atualiza se já existir por email)
- * - envia email de boas-vindas
- */
+// ----------------- NOVA ROTA: LEADS -----------------
 app.post("/api/leads", (req, res) => {
   const { google_id, nome, email, picture, telefone } = req.body;
   if (!email) return res.status(400).json({ error: "Email do lead é necessário." });
 
-  // tenta inserir; se já existir, atualiza registro
   const upsert = `
     INSERT INTO leads (google_id, nome, email, picture, telefone)
     VALUES (?,?,?,?,?)
@@ -310,11 +298,9 @@ app.post("/api/leads", (req, res) => {
   db.run(upsert, [google_id || null, nome || null, email, picture || null, telefone || null], function(err) {
     if (err) return res.status(500).json({ error: err.message });
 
-    // buscar lead para retornar id
     db.get("SELECT * FROM leads WHERE email = ?", [email], (e, row) => {
       if (e) return res.status(500).json({ error: e.message });
 
-      // enviar e-mail de boas-vindas (não bloqueante)
       try {
         const html = `<p>Olá ${nome || ''},</p>
           <p>Obrigado por se conectar com a Beta Investimentos. Em breve entraremos em contato.</p>`;
@@ -338,7 +324,7 @@ app.get("/api/relatorios/lucros", (req, res) => {
   });
 });
 
-// ----------------- Cron: lembretes 1 dia antes -----------------
+// ----------------- Cron: lembretes -----------------
 function ymd(d){ return d.toISOString().slice(0,10); }
 function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
 
@@ -348,7 +334,6 @@ cron.schedule("0 8 * * *", () => {
   const amanha = ymd(addDays(hoje, 1));
   const hojeYmd = ymd(hoje);
 
-  // lembrete pré-vencimento para vendas (à vista/pix/cartao/dinheiro)
   const sqlVPre = `
     SELECT v.id, v.total, v.vencimento, v.metodo_pagamento, c.email, c.nome
     FROM vendas v
@@ -370,7 +355,6 @@ cron.schedule("0 8 * * *", () => {
     });
   });
 
-  // parcelas (pré-vencimento)
   const sqlPPre = `
     SELECT p.id, p.num_parcela, p.qtd_total, p.valor, p.vencimento, c.email, c.nome
     FROM parcelas p
@@ -390,7 +374,6 @@ cron.schedule("0 8 * * *", () => {
     });
   });
 
-  // no dia (parcelas)
   const sqlPDia = `
     SELECT p.id, p.num_parcela, p.qtd_total, p.valor, p.vencimento, c.email, c.nome
     FROM parcelas p

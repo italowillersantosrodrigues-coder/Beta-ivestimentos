@@ -1,0 +1,9 @@
+node server.js
+
+
+npm install express cors body-parser sqlite3 nodemailer
+
+git push origin main
+
+
+git commit -m 
