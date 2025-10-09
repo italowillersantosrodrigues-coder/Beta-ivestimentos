@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Produtos - Beta Investimentos</title>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    header {
+      width: 100%;
+      background: #1c1c1c;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+    }
+
+    header h1 { color: #4CAF50; font-size: 22px; }
+    .back-btn {
+      background: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .back-btn:hover { background: #45a049; }
+
+    .container {
+      width: 90%;
+      max-width: 750px;
+      background: #1e1e1e;
+      border-radius: 15px;
+      padding: 30px;
+      margin-top: 40px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+    }
+
+    h2 { text-align: center; color: #4CAF50; margin-bottom: 25px; }
+
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    input {
+      flex: 1 1 200px;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #2c2c2c;
+      color: #fff;
+    }
+
+    button {
+      padding: 12px 20px;
+      background: #4CAF50;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover { background: #45a049; }
+
+    ul { list-style: none; padding: 0; margin-top: 25px; }
+
+    li {
+      background: #2c2c2c;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .produto-info { display: flex; align-items: center; gap: 12px; }
+    .produto-info img {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid #444;
+    }
+
+    .actions button {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-left: 5px;
+    }
+
+    .btn-edit { background: #f6ad55; color: #fff; }
+    .btn-delete { background: #e53e3e; color: #fff; }
+    .btn-edit:hover { background: #dd6b20; }
+    .btn-delete:hover { background: #c53030; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Produtos</h1>
+    <button class="back-btn" onclick="window.location.href='menu.html'">⬅ Menu</button>
+  </header>
+
+  <div class="container">
+    <h2>Cadastro de Produtos</h2>
+    <form id="formProduto">
+      <input type="hidden" id="produtoId">
+      <input type="text" id="nome" placeholder="Nome do Produto" required>
+      <input type="number" id="preco" step="0.01" placeholder="Preço (R$)" required>
+      <input type="number" id="desconto" min="0" max="100" placeholder="Desconto (%)">
+      <input type="number" id="estoque" placeholder="Estoque">
+      <input type="file" id="foto" accept="image/*">
+      <button type="submit">Salvar</button>
+    </form>
+
+    <ul id="listaProdutos"></ul>
+  </div>
+
+  <script>
+    async function carregarProdutos() {
+      try {
+        const resp = await fetch("/api/produtos");
+        const produtos = await resp.json();
+        const ul = document.getElementById("listaProdutos");
+        ul.innerHTML = "";
+
+        produtos.forEach(p => {
+          const li = document.createElement("li");
+          const nome = p.name || "";
+          const preco = Number(p.price) || 0;
+          const desconto = Number(p.desconto) || 0;
+          const estoque = Number(p.stock) || 0;
+          const foto = p.foto || "https://via.placeholder.com/60x60?text=Foto";
+
+          li.innerHTML = `
+            <div class="produto-info">
+              <img src="${foto}">
+              <div>
+                <strong>${nome}</strong><br>
+                R$ ${preco.toFixed(2)} ${desconto ? `<span style='color:green;'>(-${desconto}%)</span>` : ""}<br>
+                Estoque: ${estoque}
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn-edit" onclick='editar(${JSON.stringify({id:p._id, name:nome, price:preco, desconto, stock:estoque, foto})})'>Editar</button>
+              <button class="btn-delete" onclick='excluir("${p._id}")'>Excluir</button>
+            </div>
+          `;
+          ul.appendChild(li);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar produtos:", err);
+      }
+    }
+
+    function editar(p) {
+      document.getElementById("produtoId").value = p.id;
+      document.getElementById("nome").value = p.name;
+      document.getElementById("preco").value = p.price;
+      document.getElementById("desconto").value = p.desconto;
+      document.getElementById("estoque").value = p.stock;
+    }
+
+    async function excluir(id) {
+      if (!confirm("Deseja realmente excluir este produto?")) return;
+      try {
+        await fetch(`/api/produtos/${id}`, { method: "DELETE" });
+        carregarProdutos();
+      } catch (err) {
+        console.error("Erro ao excluir produto:", err);
+      }
+    }
+
+    document.getElementById("formProduto").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("produtoId").value;
+      const nome = document.getElementById("nome").value;
+      const preco = parseFloat(document.getElementById("preco").value) || 0;
+      const desconto = parseInt(document.getElementById("desconto").value) || 0;
+      const estoque = parseInt(document.getElementById("estoque").value) || 0;
+
+      const method = id ? "PUT" : "POST";
+      const url = id ? `/api/produtos/${id}` : "/api/produtos";
+
+      try {
+        await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: nome, price: preco, desconto, stock: estoque })
+        });
+        e.target.reset();
+        carregarProdutos();
+      } catch (err) {
+        console.error("Erro ao salvar produto:", err);
+      }
+    });
+
+    carregarProdutos();
+  </script>
+</body>
+</html>

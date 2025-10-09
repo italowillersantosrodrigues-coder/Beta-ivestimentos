@@ -1,0 +1,16 @@
+node server.js
+
+
+npm install express cors body-parser sqlite3 nodemailer
+
+
+git status
+git add .
+git commit -m "atualização correções 3"
+git push origin main
+
+
+tem que atualizar os html e o login .js para fubniconar 
+
+
+

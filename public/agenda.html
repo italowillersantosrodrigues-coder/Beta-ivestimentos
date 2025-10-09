@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <title>Agenda - Beta Investimentos</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <!-- jsPDF para exportar PDF e SheetJS para Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0f1112;
+      --panel:#141617;
+      --muted:#9aa5a1;
+      --accent:#4CAF50;
+      --card:#1b1d1e;
+      --glass: rgba(255,255,255,0.03);
+      --radius:12px;
+      --shadow:0 8px 30px rgba(0,0,0,0.6);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(180deg,var(--bg),#0b0b0b);
+      color:#e6eee9;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:22px;
+    }
+    header.top{
+      display:flex;align-items:center;justify-content:space-between;
+      gap:12px;margin-bottom:18px;
+    }
+    header.top h1{margin:0;font-size:20px;color:var(--accent)}
+    .controls{
+      display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+    }
+
+    .card{
+      background:linear-gradient(180deg,var(--panel),#121313);
+      border-radius:var(--radius);
+      padding:16px;
+      box-shadow:var(--shadow);
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns: 320px 1fr;
+      gap:18px;
+    }
+    /* left sidebar */
+    .sidebar{
+      position:relative;
+    }
+    .filter-group{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+    label.small{font-size:12px;color:var(--muted)}
+    input, select, textarea{
+      background:var(--card);
+      border:1px solid rgba(255,255,255,0.03);
+      color:var(--muted);
+      padding:10px;border-radius:8px;font-size:14px;
+      outline:none;
+    }
+    input:focus, select:focus, textarea:focus{box-shadow:0 0 0 3px rgba(76,175,80,0.08); color:#fff}
+
+    .btn{
+      background:var(--accent); color:#fff; border:none; padding:10px 12px;
+      border-radius:10px; cursor:pointer; font-weight:600;
+    }
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.05); color:var(--muted)}
+    .btn.danger{background:#e24040}
+    .btn.small{padding:8px 10px;font-size:13px;border-radius:8px}
+
+    /* main area */
+    .main{
+      display:flex;flex-direction:column;gap:12px;
+    }
+
+    .toolbar{
+      display:flex;justify-content:space-between;align-items:center;gap:8px;
+    }
+    .stats{
+      display:flex;gap:10px;align-items:center;
+    }
+    .stat{
+      background:var(--glass); padding:10px 12px;border-radius:10px;font-size:13px;color:var(--muted);
+    }
+    .toggle-view{display:flex;gap:8px;align-items:center}
+
+    /* table */
+    .table-wrap{overflow:auto;border-radius:10px}
+    table{
+      width:100%;border-collapse:collapse;
+      min-width:800px;background:transparent;
+    }
+    thead th{
+      text-align:left;padding:12px 14px;font-size:13px;color:var(--muted);
+      border-bottom:1px solid rgba(255,255,255,0.03);
+    }
+    tbody td{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.02);font-size:14px;color:#dfeee3}
+    .tag{padding:6px 8px;border-radius:999px;font-size:12px;color:#fff}
+    .tag.pending{background:#f6ad55;color:#2b1a00}
+    .tag.done{background:#4CAF50}
+    .tag.cancel{background:#e53e3e}
+
+    /* card list */
+    .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+
+    .event-card{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.15));
+      padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.02);
+    }
+    .event-card h4{margin:0 0 6px 0;font-size:15px}
+    .muted{color:var(--muted);font-size:13px}
+
+    /* modal form */
+    .modal{
+      position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+      background:rgba(0,0,0,0.55);z-index:50;visibility:hidden;opacity:0;transition:0.18s;
+    }
+    .modal.open{visibility:visible;opacity:1}
+    .modal .modal-body{width:720px;max-width:95%}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+    /* footer small */
+    .help{font-size:13px;color:var(--muted);margin-top:6px}
+
+    @media (max-width:980px){
+      .layout{grid-template-columns:1fr; }
+      .sidebar{order:2}
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <h1><i class="fa-solid fa-calendar-check"></i> Agenda / Monitoramento</h1>
+
+    <div class="controls">
+      <div class="stats card" style="display:flex;gap:12px;align-items:center;">
+        <div class="stat" id="countTotal">Eventos: —</div>
+        <div class="stat" id="countPending">Pendentes: —</div>
+        <div class="stat" id="sumValue">Total R$: —</div>
+      </div>
+      <button class="btn" id="btnNew"><i class="fa-solid fa-plus"></i> Novo</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar card">
+      <div class="filter-group">
+        <label class="small">Data</label>
+        <input type="date" id="filterDate" />
+
+        <label class="small">Técnico (ou responsável)</label>
+        <select id="filterTech"><option value="">— Todos —</option></select>
+
+        <label class="small">Status</label>
+        <select id="filterStatus">
+          <option value="">— Todos —</option>
+          <option value="pending">Pendente</option>
+          <option value="done">Concluído</option>
+          <option value="cancel">Cancelado</option>
+        </select>
+
+        <label class="small">Buscar (cliente / descrição)</label>
+        <input id="filterSearch" placeholder="digite para buscar..." />
+
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn small" id="btnApply">Aplicar</button>
+          <button class="btn ghost small" id="btnClear">Limpar</button>
+        </div>
+      </div>
+
+      <hr style="border:none;height:1px;background:rgba(255,255,255,0.02);margin:12px 0">
+
+      <div class="filter-group">
+        <label class="small">Visualização</label>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost small" id="viewCards"><i class="fa-solid fa-table-cells-large"></i> cards</button>
+          <button class="btn ghost small" id="viewTable"><i class="fa-solid fa-table"></i> tabela</button>
+        </div>
+
+        <label class="small" style="margin-top:8px">Exportar</label>
+        <div style="display:flex;gap:8px">
+          <button class="btn small" id="exportCsv"><i class="fa-solid fa-file-csv"></i> CSV</button>
+          <button class="btn small" id="exportXlsx"><i class="fa-solid fa-file-excel"></i> XLSX</button>
+          <button class="btn small" id="exportPdf"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+        </div>
+      </div>
+
+      <p class="help">Dica: clique em um evento para editar / excluir. Use "Novo" para criar compromissos manualmente.</p>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <div class="toolbar card">
+        <div style="display:flex;gap:10px;align-items:center;">
+          <label class="small" style="margin-right:6px">Data Rápida:</label>
+          <input type="date" id="quickDate" />
+          <button class="btn small" id="btnLoadQuick">Carregar</button>
+          <button class="btn ghost small" id="btnReload">Recarregar</button>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div class="toggle-view">
+            <span class="muted">Modo:</span>
+            <button class="btn ghost small" id="btnToggleView"><i class="fa-solid fa-eye"></i> Alternar</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="contentArea" class="card">
+        <!-- tabela por padrão -->
+        <div id="tableView">
+          <div class="table-wrap">
+            <table id="eventsTable" role="grid" aria-label="Eventos">
+              <thead>
+                <tr>
+                  <th>Data / Hora</th>
+                  <th>Cliente / Técnico</th>
+                  <th>Descrição</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                  <th style="text-align:right">Ações</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="cardsView" style="display:none;margin-top:10px">
+          <div class="cards-grid" id="cardsGrid"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL FORM -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal-body card">
+      <h3 id="modalTitle">Novo compromisso</h3>
+      <form id="formAgenda">
+        <input type="hidden" id="evId" />
+        <div class="form-grid" style="margin-top:8px">
+          <div>
+            <label class="small">Data</label>
+            <input type="date" id="evDate" required />
+          </div>
+          <div>
+            <label class="small">Hora</label>
+            <input type="time" id="evTime" required />
+          </div>
+          <div>
+            <label class="small">Cliente</label>
+            <input id="evClient" placeholder="Nome do cliente" required />
+          </div>
+          <div>
+            <label class="small">Técnico</label>
+            <select id="evTech"><option value="">— selecione —</option></select>
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label class="small">Descrição</label>
+            <textarea id="evDesc" rows="3" placeholder="Observações / endereço / telefone"></textarea>
+          </div>
+          <div>
+            <label class="small">Valor (R$)</label>
+            <input id="evValue" type="number" step="0.01" placeholder="0.00" />
+          </div>
+          <div>
+            <label class="small">Status</label>
+            <select id="evStatus">
+              <option value="pending">Pendente</option>
+              <option value="done">Concluído</option>
+              <option value="cancel">Cancelado</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button type="button" class="btn ghost" id="btnCancelModal">Cancelar</button>
+          <button type="submit" class="btn" id="btnSaveEvent">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/agenda.js"></script>
+</body>
+</html>

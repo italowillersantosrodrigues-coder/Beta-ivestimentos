@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Menu - Beta Investimentos</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --bg: #0b0b0b;
+      --panel: #1a1a1a;
+      --accent: #4CAF50;
+      --text: #f0f0f0;
+      --muted: #888;
+      --radius: 16px;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top left, #111 0%, #000 100%);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    header {
+      width: 100%;
+      background: var(--panel);
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 {
+      font-size: 24px;
+      color: var(--accent);
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logout-btn {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+
+    .logout-btn:hover {
+      background: #45a049;
+      transform: translateY(-2px);
+    }
+
+    main {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 50px 20px;
+    }
+
+    .menu {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 35px;
+      width: 90%;
+      max-width: 900px;
+    }
+
+    .menu-card {
+      background: var(--panel);
+      border-radius: var(--radius);
+      padding: 35px 20px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.35s ease;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .menu-card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(76,175,80,0.15), transparent 60%);
+      transform: scale(0);
+      transition: transform 0.5s ease;
+      z-index: 0;
+    }
+
+    .menu-card:hover::before {
+      transform: scale(1);
+    }
+
+    .menu-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--accent);
+      box-shadow: 0 0 20px rgba(76,175,80,0.2);
+    }
+
+    .menu-card i {
+      font-size: 42px;
+      margin-bottom: 14px;
+      color: var(--accent);
+      transition: color 0.3s, transform 0.3s;
+      z-index: 1;
+      position: relative;
+    }
+
+    .menu-card:hover i {
+      color: #fff;
+      transform: scale(1.1);
+    }
+
+    .menu-card h3 {
+      margin: 0;
+      font-size: 18px;
+      color: #fff;
+      letter-spacing: 0.5px;
+      z-index: 1;
+      position: relative;
+    }
+
+    .badge {
+      position: absolute;
+      top: 12px;
+      right: 18px;
+      background: #e53e3e;
+      color: #fff;
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.5);
+      display: none;
+    }
+
+    footer {
+      padding: 15px;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      background: #0d0d0d;
+      width: 100%;
+    }
+
+    footer span {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 20px; }
+      .menu { gap: 25px; }
+      .menu-card { padding: 28px 15px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><i class="fa-solid fa-chart-line"></i> β Beta Investimentos</h1>
+    <button class="logout-btn" id="btn-sair">
+      <i class="fas fa-sign-out-alt"></i> Sair
+    </button>
+  </header>
+
+  <main>
+    <div class="menu">
+      <div class="menu-card" id="btn-clientes">
+        <i class="fas fa-users"></i>
+        <h3>Clientes</h3>
+      </div>
+
+      <div class="menu-card" id="btn-produtos">
+        <i class="fas fa-box-open"></i>
+        <h3>Produtos</h3>
+      </div>
+
+      <div class="menu-card" id="btn-vendas">
+        <i class="fas fa-cash-register"></i>
+        <h3>Vendas</h3>
+      </div>
+
+      <div class="menu-card" id="btn-agenda">
+        <i class="fas fa-calendar-check"></i>
+        <h3>Agenda</h3>
+        <div class="badge" id="agendaBadge">0</div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    © <span>Beta Investimentos</span> — Todos os direitos reservados.
+  </footer>
+
+  <!-- Script JS externo -->
+  <script defer src="/js/menu.js"></script>
+</body>
+</html>
