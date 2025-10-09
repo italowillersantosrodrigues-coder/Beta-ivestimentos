@@ -1,13 +1,37 @@
-// src/models/Product.js
 import mongoose from "mongoose";
 
-const ProductSchema = new mongoose.Schema({
-  nome: String,
-  descricao: String,
-  preco: Number,
-  estoque: Number,
-  criadoEm: { type: Date, default: Date.now },
-  // adicione campos extras
-});
+const productSchema = new mongoose.Schema(
+  {
+    nome: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    descricao: {
+      type: String,
+      required: false,
+    },
+    preco: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    desconto: {
+      type: Number,
+      required: false,
+      default: 0,
+    },
+    estoque: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
+    foto: {
+      type: String,
+      required: false,
+    },
+  },
+  { timestamps: true }
+);
 
-export default mongoose.models.Product || mongoose.model("Product", ProductSchema);
+export default mongoose.model("Produto", productSchema);

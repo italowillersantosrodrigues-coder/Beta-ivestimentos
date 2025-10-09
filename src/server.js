@@ -27,17 +27,12 @@ const PORT = process.env.PORT || 3000;
 // ================= MIDDLEWARES =================
 app.use(
   helmet({
-    contentSecurityPolicy: false, // desativa CSP para permitir JS local (ajuste em produção)
+    contentSecurityPolicy: false,
   })
 );
-
 app.use(cors());
-
-// body parsing nativo do express (substitui body-parser)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Servir arquivos estáticos (pasta public na raiz do projeto)
 app.use(express.static(path.join(process.cwd(), "public")));
 
 // =================== AUTENTICAÇÃO JWT ===================
@@ -58,9 +53,9 @@ function autenticarToken(req, res, next) {
   }
 }
 
-// =================== ROTAS DE AUTENTICAÇÃO (rápidas) ===================
+// =================== ROTAS DE AUTENTICAÇÃO ===================
 
-// Registro local (mantive seu fluxo)
+// Registro: cria senhaHash e salva
 app.post("/api/auth/register", async (req, res) => {
   try {
     const { nome, email, senha } = req.body;
@@ -74,15 +69,19 @@ app.post("/api/auth/register", async (req, res) => {
     const senhaHash = await bcrypt.hash(senha, 10);
     const novo = await User.create({ nome, email, senhaHash });
 
-    return res.json({ message: "Usuário registrado com sucesso", user: novo });
+    const retorno = { ...novo.toObject() };
+    delete retorno.senhaHash;
+    delete retorno.passwordHash;
+    delete retorno.senha;
+
+    return res.status(201).json({ message: "Usuário registrado com sucesso", user: retorno });
   } catch (err) {
     console.error("Erro ao registrar:", err);
     return res.status(500).json({ error: "Erro no servidor" });
   }
 });
 
-// Login local (mantive seu fluxo)
-// Observação: no body você envia { email, password }
+// Login robusto
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -91,38 +90,53 @@ app.post("/api/auth/login", async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ error: "Usuário não encontrado" });
 
-    const ok = await bcrypt.compare(password, user.senhaHash);
+    const storedHash = User.getAnyHash(user);
+    if (!storedHash) {
+      console.error("Login falhou: usuário sem hash de senha (email):", user.email);
+      return res.status(403).json({ error: "Conta sem senha configurada. Solicite redefinição de senha." });
+    }
+
+    const ok = await bcrypt.compare(password, storedHash);
     if (!ok) return res.status(401).json({ error: "Senha incorreta" });
 
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      { id: user._id, email: user.email, papel: user.papel },
       process.env.JWT_SECRET || "dev_secret",
       { expiresIn: "7d" }
     );
 
-    return res.json({ message: "Login bem-sucedido", token, user });
+    const userSafe = user.toObject();
+    delete userSafe.senhaHash;
+    delete userSafe.passwordHash;
+    delete userSafe.senha;
+
+    return res.json({ message: "Login bem-sucedido", token, user: userSafe });
   } catch (err) {
     console.error("Erro no login:", err);
     return res.status(500).json({ error: "Erro interno no servidor" });
   }
 });
 
-// Monta rota admin (mantive seu import)
+// Mantém rota admin importada
 app.use("/api/admin", authRouter);
 
 // =================== ROTAS DO SISTEMA ===================
-// OBS: mantenho o mesmo prefixo que você usa no front (/api/clientes etc.)
-app.use("/api/clientes", clientsRouter);
+
+// 🔧 Corrigido para alinhar com o frontend
+// O frontend chama /api/clientes, então adicionamos um alias:
+app.use("/api/clientes", clientsRouter); // ✅ novo alias
+app.use("/api/clients", clientsRouter);  // ✅ mantém compatibilidade anterior
+
 app.use("/api/produtos", productsRouter);
 app.use("/api/vendas", salesRouter);
 app.use("/api/relatorios", reportsRouter);
 app.use("/api/monitor", monitorRouter);
 app.use("/api/templates", templatesRouter);
 
-// 🔹 Rota de perfil protegida
+// Rota protegida de perfil
 app.get("/api/perfil", autenticarToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-senhaHash");
+    const user = await User.findById(req.user.id).select("-senhaHash -passwordHash -senha");
     if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
     return res.json(user);
   } catch (err) {
@@ -132,12 +146,10 @@ app.get("/api/perfil", autenticarToken, async (req, res) => {
 });
 
 // =================== FRONTEND ===================
-// Página inicial → Login
 app.get("/", (req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "Login.html"));
 });
 
-// Outras páginas do painel
 const paginas = ["menu", "clientes", "produtos", "vendas", "agenda"];
 paginas.forEach((p) => {
   app.get(`/${p}.html`, (req, res) => {
@@ -145,7 +157,6 @@ paginas.forEach((p) => {
   });
 });
 
-// 🔹 404 genérico (fallback para SPA ou login)
 app.use((req, res) => {
   res.status(404).sendFile(path.join(process.cwd(), "public", "Login.html"));
 });
@@ -156,14 +167,11 @@ const server = app.listen(PORT, () => {
   console.log(`🌐 Ambiente: ${process.env.NODE_ENV || "desenvolvimento"}`);
 });
 
-// Boas práticas: captura erros inesperados e finaliza com log
 process.on("uncaughtException", (err) => {
   console.error("uncaughtException:", err);
-  // opcional: process.exit(1);
 });
 process.on("unhandledRejection", (reason) => {
   console.error("unhandledRejection:", reason);
-  // opcional: process.exit(1);
 });
 
 export default server;
