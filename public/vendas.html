@@ -1,352 +1,405 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Vendas - Beta Investimentos</title>
-  <style>
-    body {
-      background: #0f0f0f;
-      color: #fff;
-      font-family: "Segoe UI", Tahoma, sans-serif;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    header {
-      width: 100%;
-      background: #1c1c1c;
-      padding: 15px 25px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.6);
-    }
-
-    header h1 { color: #4CAF50; font-size: 22px; }
-    .back-btn {
-      background: #4CAF50;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 18px;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    .back-btn:hover { background: #45a049; }
-
-    .container {
-      width: 95%;
-      max-width: 950px;
-      background: #1e1e1e;
-      border-radius: 15px;
-      padding: 35px;
-      margin-top: 40px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-      animation: fadeIn 0.6s ease;
-    }
-
-    h2 {
-      text-align: center;
-      color: #4CAF50;
-      margin-bottom: 25px;
-      font-size: 22px;
-    }
-
-    label { display: block; margin: 8px 0 4px; font-weight: 500; }
-
-    select, input {
-      width: 100%;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      background: #2c2c2c;
-      color: #fff;
-      margin-bottom: 10px;
-      font-size: 14px;
-    }
-
-    button {
-      background: #4CAF50;
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      padding: 12px 20px;
-      cursor: pointer;
-      transition: 0.3s;
-      width: 100%;
-      font-weight: bold;
-      margin-top: 10px;
-    }
-    button:hover { background: #45a049; }
-
-    .produto-item {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    .produto-item select, .produto-item input { flex: 1; }
-    .produto-item button {
-      flex: 0.3;
-      background: #e53e3e;
-    }
-    .produto-item button:hover { background: #c53030; }
-
-    .hidden { display: none !important; }
-
-    .msg {
-      text-align: center;
-      font-size: 14px;
-      margin-top: 10px;
-    }
-
-    table {
-      width: 100%;
-      margin-top: 20px;
-      border-collapse: collapse;
-      background: #222;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #333;
-      text-align: left;
-    }
-    th { background: #333; color: #4CAF50; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>Vendas</h1>
-    <button class="back-btn" onclick="window.location.href='menu.html'">⬅ Menu</button>
-  </header>
-
-  <div class="container">
-    <h2>Cadastro de Venda</h2>
-    <form id="formVenda">
-      <label>Cliente</label>
-      <select id="clienteSelect" required></select>
-
-      <label>Produtos</label>
-      <div id="listaProdutosVenda"></div>
-      <button type="button" onclick="adicionarProduto()">+ Adicionar Produto</button>
-
-      <label>Método de Pagamento</label>
-      <select id="metodoPagamento" required>
-        <option value="">Selecione</option>
-        <option value="pix">Pix</option>
-        <option value="cartao">Cartão</option>
-        <option value="dinheiro">Dinheiro</option>
-        <option value="carne">Carnê</option>
-      </select>
-
-      <div id="grupoCarne" class="hidden">
-        <label>Parcelas</label>
-        <input type="number" id="qtdParcelas" placeholder="Quantidade de parcelas">
-        <input type="number" id="valorParcela" step="0.01" placeholder="Valor de cada parcela (R$)">
-        <input type="date" id="primeiroVencimento" placeholder="Data do primeiro vencimento">
-      </div>
-
-      <label>Data da Compra</label>
-      <input type="date" id="dataCompra" required>
-
-      <label>Total</label>
-      <input type="text" id="totalVenda" readonly>
-
-      <button type="submit">💾 Salvar Venda</button>
-      <button type="button" id="btnEmail" class="hidden">📧 Enviar Confirmação por E-mail</button>
-    </form>
-
-    <p id="mensagem" class="msg"></p>
-
-    <table id="tabelaParcelas" class="hidden">
-      <thead>
-        <tr><th>#</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <script>
-    let produtosCache = [];
-    let vendaSalva = null;
-
-    const BRL = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-
-    // ========== CARREGAR CLIENTES ==========
-    async function carregarClientes() {
-      try {
-        const r = await fetch("/api/clientes");
-        const clientes = await r.json();
-        const s = document.getElementById("clienteSelect");
-        s.innerHTML = "<option value=''>Selecione</option>";
-        clientes.forEach(c => s.innerHTML += `<option value="${c._id}">${c.nome}</option>`);
-      } catch {
-        alert("Erro ao carregar clientes!");
-      }
-    }
-
-    // ========== CARREGAR PRODUTOS ==========
-    async function carregarProdutos() {
-      const r = await fetch("/api/produtos");
-      produtosCache = await r.json();
-    }
-
-    // ========== ADICIONAR PRODUTO ==========
-    function adicionarProduto() {
-      if (produtosCache.length === 0) return alert("Nenhum produto disponível!");
-      const div = document.createElement("div");
-      div.className = "produto-item";
-      div.innerHTML = `
-        <select onchange="atualizarTotal()">
-          ${produtosCache.map(p => `<option value="${p._id}">${p.nome} (${BRL(p.preco)})</option>`).join("")}
-        </select>
-        <input type="number" min="1" value="1" onchange="atualizarTotal()">
-        <button type="button" onclick="this.parentElement.remove(); atualizarTotal();">Remover</button>
-      `;
-      document.getElementById("listaProdutosVenda").appendChild(div);
-      atualizarTotal();
-    }
-
-    // ========== CALCULAR TOTAL ==========
-    function atualizarTotal() {
-      let total = 0;
-      document.querySelectorAll(".produto-item").forEach(div => {
-        const id = div.querySelector("select").value;
-        const qtd = Number(div.querySelector("input").value);
-        const produto = produtosCache.find(p => p._id === id);
-        if (produto) total += produto.preco * qtd;
-      });
-      document.getElementById("totalVenda").value = BRL(total);
-      if (document.getElementById("metodoPagamento").value === "carne")
-        atualizarParcelas();
-    }
-
-    // ========== ATUALIZAR PARCELAS ==========
-    function atualizarParcelas() {
-      const qtd = Number(document.getElementById("qtdParcelas").value);
-      const valor = Number(document.getElementById("valorParcela").value);
-      const dataInicial = document.getElementById("primeiroVencimento").value;
-      const tabela = document.getElementById("tabelaParcelas");
-      const corpo = tabela.querySelector("tbody");
-      corpo.innerHTML = "";
-      if (!qtd || !valor || !dataInicial) {
-        tabela.classList.add("hidden");
-        return;
-      }
-      const inicio = new Date(dataInicial);
-      for (let i = 1; i <= qtd; i++) {
-        const venc = new Date(inicio);
-        venc.setMonth(venc.getMonth() + i - 1);
-        corpo.innerHTML += `<tr><td>${i}</td><td>${venc.toLocaleDateString()}</td><td>${BRL(valor)}</td><td>Em aberto</td></tr>`;
-      }
-      tabela.classList.remove("hidden");
-    }
-
-    // ========== ALTERAR MÉTODO DE PAGAMENTO ==========
-    document.addEventListener("change", e => {
-      if (e.target.id === "metodoPagamento") {
-        const carne = e.target.value === "carne";
-        document.getElementById("grupoCarne").classList.toggle("hidden", !carne);
-        document.getElementById("tabelaParcelas").classList.toggle("hidden", !carne);
-      }
-    });
-
-    // ========== SALVAR VENDA ==========
-    document.getElementById("formVenda").addEventListener("submit", async e => {
-      e.preventDefault();
-      try {
-        const clienteId = document.getElementById("clienteSelect").value;
-        if (!clienteId) return alert("Selecione um cliente.");
-
-        const produtos = [];
-        document.querySelectorAll(".produto-item").forEach(div => {
-          const id = div.querySelector("select").value;
-          const qtd = Number(div.querySelector("input").value);
-          if (id && qtd > 0) produtos.push({ produtoId: id, quantidade: qtd });
-        });
-
-        const venda = {
-          clienteId,
-          produtos,
-          metodoPagamento: document.getElementById("metodoPagamento").value,
-          dataCompra: document.getElementById("dataCompra").value,
-          total: document.getElementById("totalVenda").value.replace(/[^\d,.-]/g, "").replace(",", "."),
-          parcelas: []
-        };
-
-        if (venda.metodoPagamento === "carne") {
-          const qtd = Number(document.getElementById("qtdParcelas").value);
-          const valor = Number(document.getElementById("valorParcela").value);
-          const data = document.getElementById("primeiroVencimento").value;
-          const inicio = new Date(data);
-          for (let i = 0; i < qtd; i++) {
-            const venc = new Date(inicio);
-            venc.setMonth(venc.getMonth() + i);
-            venda.parcelas.push({ numero: i + 1, valor, vencimento: venc });
-          }
+    <meta charset="UTF-8" />
+    <title>Vendas - Beta Investimentos</title>
+    <style>
+        /* O estilo a seguir é baseado no seu HTML de Produtos e aplicado aqui para consistência. */
+        body {
+            background: #111; /* Fundo mais escuro */
+            color: #fff;
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
 
-        const resp = await fetch("/api/vendas", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(venda)
+        header {
+            width: 100%;
+            background: #1c1c1c;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+        }
+
+        header h1 { color: #4CAF50; font-size: 22px; }
+        .back-btn {
+            background: #4CAF50;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .back-btn:hover { background: #45a049; }
+
+        .container {
+            width: 95%;
+            max-width: 950px;
+            background: #1e1e1e;
+            border-radius: 15px;
+            padding: 35px;
+            margin-top: 40px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            animation: fadeIn 0.6s ease;
+        }
+
+        h2 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 25px;
+            font-size: 22px;
+        }
+
+        label { display: block; margin: 8px 0 4px; font-weight: 500; }
+
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: #2c2c2c;
+            color: #fff;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        /* Ajuste do layout do formulário principal para ter duas colunas */
+        #formVenda > label:nth-child(1), #formVenda > select:nth-child(2),
+        #formVenda > label:nth-child(3), #formVenda > div:nth-child(4) {
+            margin-bottom: 15px; /* Adiciona espaçamento entre as seções */
+        }
+
+        button {
+            background: #4CAF50;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            width: 100%;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        button:hover { background: #45a049; }
+
+        .produto-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .produto-item select, .produto-item input { flex: 1; }
+        .produto-item button {
+            flex: 0.3;
+            background: #e53e3e;
+            padding: 10px; /* Ajuste para o botão Remover */
+            margin-top: 0;
+        }
+        .produto-item button:hover { background: #c53030; }
+
+        .hidden { display: none !important; }
+
+        .msg {
+            text-align: center;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background: #222;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+            text-align: left;
+        }
+        th { background: #333; color: #4CAF50; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Vendas</h1>
+        <button class="back-btn" onclick="window.location.href='menu.html'">⬅ Menu</button>
+    </header>
+
+    <div class="container">
+        <h2>Cadastro de Venda</h2>
+        <form id="formVenda">
+            <label>Cliente</label>
+            <select id="clienteSelect" required></select>
+
+            <label>Produtos</label>
+            <div id="listaProdutosVenda"></div>
+            <button type="button" onclick="adicionarProduto()">+ Adicionar Produto</button>
+
+            <label>Método de Pagamento</label>
+            <select id="metodoPagamento" required>
+                <option value="">Selecione</option>
+                <option value="avista">Pix (À Vista)</option> 
+                <option value="cartao">Cartão</option>
+                <option value="dinheiro">Dinheiro (À Vista)</option>
+                <option value="parcelado">Carnê (Parcelado)</option> 
+            </select>
+
+            <div id="grupoCarne" class="hidden">
+                <label>Parcelas</label>
+                <input type="number" id="qtdParcelas" placeholder="Quantidade de parcelas">
+                <input type="number" id="valorParcela" step="0.01" placeholder="Valor de cada parcela (R$)" class="hidden"> 
+                <input type="date" id="primeiroVencimento" placeholder="Data do primeiro vencimento">
+            </div>
+
+            <label>Data da Compra</label>
+            <input type="date" id="dataCompra" required>
+
+            <label>Total</label>
+            <input type="text" id="totalVenda" readonly>
+
+            <button type="submit">💾 Salvar Venda</button>
+            <button type="button" id="btnEmail" style="background:#007bff;" class="hidden">📧 Enviar Confirmação por E-mail</button>
+        </form>
+
+        <p id="mensagem" class="msg"></p>
+
+        <table id="tabelaParcelas" class="hidden">
+            <thead>
+                <tr><th>#</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr>
+            </thead>
+            <tbody></tbody>
+            </table>
+    </div>
+
+    <script>
+        let produtosCache = [];
+        let clientesCache = []; // Adiciona cache de clientes
+        let vendaSalva = null;
+
+        const BRL = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+
+        // ========== CARREGAR CLIENTES ==========
+        async function carregarClientes() {
+            try {
+                const r = await fetch("/api/clientes");
+                clientesCache = await r.json();
+                const s = document.getElementById("clienteSelect");
+                s.innerHTML = "<option value=''>Selecione</option>";
+                clientesCache.forEach(c => s.innerHTML += `<option value="${c._id}">${c.nome}</option>`);
+            } catch {
+                alert("Erro ao carregar clientes!");
+            }
+        }
+
+        // ========== CARREGAR PRODUTOS ==========
+        async function carregarProdutos() {
+            const r = await fetch("/api/produtos");
+            produtosCache = await r.json();
+        }
+
+        // ========== ADICIONAR PRODUTO ==========
+        function adicionarProduto() {
+            if (produtosCache.length === 0) return alert("Nenhum produto disponível!");
+            const div = document.createElement("div");
+            div.className = "produto-item";
+            div.innerHTML = `
+                <select onchange="atualizarTotal()">
+                    <option value="">Selecione um produto</option>
+                    ${produtosCache.map(p => `<option value="${p._id}">${p.nome} (${BRL(p.preco)})</option>`).join("")}
+                </select>
+                <input type="number" min="1" value="1" onchange="atualizarTotal()">
+                <button type="button" onclick="this.parentElement.remove(); atualizarTotal();">Remover</button>
+            `;
+            document.getElementById("listaProdutosVenda").appendChild(div);
+            atualizarTotal();
+        }
+
+        // ========== CALCULAR TOTAL ==========
+        function atualizarTotal() {
+            let total = 0;
+            document.querySelectorAll(".produto-item").forEach(div => {
+                const id = div.querySelector("select").value;
+                const qtd = Number(div.querySelector("input").value);
+                const produto = produtosCache.find(p => p._id === id);
+                if (produto) total += (Number(produto.preco) || 0) * qtd;
+            });
+            
+            const totalArredondado = Math.round(total * 100) / 100;
+            
+            document.getElementById("totalVenda").value = BRL(totalArredondado);
+            
+            if (document.getElementById("metodoPagamento").value === "parcelado")
+                atualizarParcelas(totalArredondado);
+        }
+
+        // ========== ATUALIZAR PARCELAS (Lógica omitida para brevidade, mas está no seu código) ==========
+        function atualizarParcelas(totalVenda) {
+            const qtd = Number(document.getElementById("qtdParcelas").value);
+            const total = totalVenda || Number(document.getElementById("totalVenda").value.replace(/[^\d,.-]/g, "").replace(",", "."));
+            const dataInicial = document.getElementById("primeiroVencimento").value;
+            const tabela = document.getElementById("tabelaParcelas");
+            const corpo = tabela.querySelector("tbody");
+            corpo.innerHTML = "";
+            
+            if (!qtd || isNaN(total) || !dataInicial) {
+                tabela.classList.add("hidden");
+                return;
+            }
+            
+            const valorParcela = Math.round((total / qtd) * 100) / 100;
+            
+            const inicio = new Date(dataInicial);
+            
+            for (let i = 1; i <= qtd; i++) {
+                const venc = new Date(inicio);
+                venc.setMonth(venc.getMonth() + i - 1); 
+                corpo.innerHTML += `<tr><td>${i}</td><td>${venc.toLocaleDateString()}</td><td>${BRL(valorParcela)}</td><td>Em aberto</td></tr>`;
+            }
+            
+            tabela.classList.remove("hidden");
+        }
+
+
+        // ========== ALTERAR MÉTODO DE PAGAMENTO (Lógica omitida para brevidade, mas está no seu código) ==========
+        document.addEventListener("change", e => {
+            if (e.target.id === "metodoPagamento") {
+                const parcelado = e.target.value === "parcelado";
+                document.getElementById("grupoCarne").classList.toggle("hidden", !parcelado);
+                document.getElementById("tabelaParcelas").classList.toggle("hidden", !parcelado);
+                atualizarTotal();
+            }
+            
+            if (e.target.id === "qtdParcelas" || e.target.id === "primeiroVencimento") {
+                if (document.getElementById("metodoPagamento").value === "parcelado") {
+                    atualizarParcelas();
+                }
+            }
         });
 
-        if (!resp.ok) throw new Error("Falha ao salvar venda");
+        // ========== SALVAR VENDA (CORRIGIDO PARA ENVIAR UNITPRICE E DESCRIPTION) ==========
+        document.getElementById("formVenda").addEventListener("submit", async e => {
+            e.preventDefault();
+            try {
+                const clienteId = document.getElementById("clienteSelect").value;
+                if (!clienteId) return alert("Selecione um cliente.");
 
-        vendaSalva = await resp.json();
-        mostrarMensagem("✅ Venda salva com sucesso!", "green");
-        document.getElementById("btnEmail").classList.remove("hidden");
+                // 1. CONSTRUIR O ARRAY 'items' INCLUINDO unitPrice E description
+                const items = []; 
+                document.querySelectorAll(".produto-item").forEach(div => {
+                    const id = div.querySelector("select").value;
+                    const qtd = Number(div.querySelector("input[type='number']").value); 
+                    const produto = produtosCache.find(p => p._id === id);
+                    
+                    if (id && qtd > 0 && produto) {
+                        items.push({ 
+                            product: id, 
+                            quantity: qtd,
+                            unitPrice: Number(produto.preco),
+                            description: produto.nome || `Produto ID: ${id}` 
+                        });
+                    }
+                });
+                
+                if (items.length === 0) return alert("Adicione pelo menos um produto válido.");
 
-      } catch (err) {
-        console.error(err);
-        mostrarMensagem("❌ Erro ao salvar venda.", "red");
-      }
-    });
+                // 2. CONSTRUIR O OBJETO (PAYLOAD)
+                const paymentType = document.getElementById("metodoPagamento").value;
+                
+                const payload = {
+                    client: clienteId, 
+                    items: items, 
+                    paymentType: paymentType, 
+                };
 
-    // ========== ENVIAR CONFIRMAÇÃO POR EMAIL ==========
-    document.getElementById("btnEmail").addEventListener("click", async () => {
-      if (!vendaSalva) return alert("Salve a venda antes de enviar o e-mail.");
-      try {
-        const resp = await fetch(`/api/notifications/email`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: vendaSalva.cliente?.email,
-            subject: "Confirmação de Venda - Beta Investimentos",
-            message: `Olá ${vendaSalva.cliente?.nome}, sua compra foi registrada com sucesso!`
-          })
+                // 3. ADICIONAR DADOS DE PARCELA SE FOR CARNÊ
+                if (paymentType === "parcelado") {
+                    payload.installmentsCount = Number(document.getElementById("qtdParcelas").value); 
+                    payload.firstDueDate = document.getElementById("primeiroVencimento").value; 
+                    if (!payload.installmentsCount || !payload.firstDueDate) {
+                        return alert("Preencha a quantidade de parcelas e a data do primeiro vencimento.");
+                    }
+                }
+                
+                const resp = await fetch("/api/vendas", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload) 
+                });
+
+                if (!resp.ok) {
+                    const errorJson = await resp.json().catch(() => ({ error: 'Erro de servidor desconhecido' }));
+                    throw new Error(errorJson.error || "Falha ao salvar venda");
+                }
+
+                vendaSalva = await resp.json();
+                mostrarMensagem("✅ Venda salva com sucesso!", "green");
+                document.getElementById("btnEmail").classList.remove("hidden");
+
+            } catch (err) {
+                console.error("Erro ao salvar venda:", err);
+                mostrarMensagem("❌ Erro ao salvar venda. Verifique o console do navegador.", "red");
+            }
         });
-        if (!resp.ok) throw new Error();
-        mostrarMensagem("📧 E-mail de confirmação enviado!", "green");
-      } catch {
-        mostrarMensagem("Erro ao enviar e-mail.", "red");
-      }
-    });
 
-    // ========== MENSAGENS ==========
-    function mostrarMensagem(txt, cor="white") {
-      const m = document.getElementById("mensagem");
-      m.style.color = cor;
-      m.textContent = txt;
-      setTimeout(() => m.textContent = "", 4000);
-    }
+        // ========== ENVIAR CONFIRMAÇÃO POR EMAIL (CORRIGIDO) ==========
+        document.getElementById("btnEmail").addEventListener("click", async () => {
+            if (!vendaSalva) return alert("Salve a venda antes de enviar o e-mail.");
+            
+            // CORREÇÃO: Busca o cliente na memória (cache) pelo ID retornado na venda
+            const cliente = clientesCache.find(c => c._id === vendaSalva.client);
 
-    // ========== INICIALIZAÇÃO ==========
-    carregarClientes();
-    carregarProdutos();
-  </script>
+            if (!cliente || !cliente.email) {
+                return mostrarMensagem("❌ Cliente não encontrado ou e-mail indisponível.", "red");
+            }
+
+            try {
+                const resp = await fetch(`/api/notifications/email`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        to: cliente.email, // Usa o e-mail do cliente encontrado no cache
+                        subject: "Confirmação de Venda - Beta Investimentos",
+                        message: `Olá ${cliente.nome}, sua compra no valor total de ${BRL(vendaSalva.totalAmount)} foi registrada com sucesso!`
+                    })
+                });
+                
+                if (!resp.ok) throw new Error();
+                mostrarMensagem("📧 E-mail de confirmação enviado!", "green");
+            } catch {
+                mostrarMensagem("❌ Erro ao enviar e-mail. Verifique se o seu backend de notificação está funcionando.", "red");
+            }
+        });
+
+        // ========== MENSAGENS ==========
+        function mostrarMensagem(txt, cor="white") {
+            const m = document.getElementById("mensagem");
+            m.style.color = cor;
+            m.textContent = txt;
+            setTimeout(() => m.textContent = "", 4000);
+        }
+
+        // ========== INICIALIZAÇÃO ==========
+        carregarClientes();
+        carregarProdutos();
+        
+        // Timeout para garantir que o total seja atualizado caso o cliente já tenha produtos salvos
+        setTimeout(atualizarTotal, 500); 
+    </script>
 </body>
 </html>
