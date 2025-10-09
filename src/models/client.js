@@ -1,23 +1,28 @@
+// src/models/client.js
 import mongoose from 'mongoose';
 
-const Address = new mongoose.Schema({
-  street: String,
-  city: String,
-  state: String,
-  zip: String
+const enderecoSchema = new mongoose.Schema({
+  rua: String,
+  numero: String,
+  complemento: String,
+  bairro: String,
+  cidade: String,
+  estado: String,
+  cep: String
 }, { _id: false });
 
-const clientSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  phone: String,
-  whatsapp: String,
-  email: String,
-  cpf: String,
-  address: Address,
-  notes: String,
-  createdAt: { type: Date, default: Date.now }
+const clienteSchema = new mongoose.Schema({
+  nome: { type: String, required: true, trim: true },
+  email: { type: String, required: true, trim: true, lowercase: true },
+  telefone: { type: String, trim: true },
+  cpfCnpj: { type: String, trim: true }, // opcional: CPF/CNPJ
+  endereco: enderecoSchema,
+  notas: { type: String },
+}, {
+  timestamps: true // createdAt e updatedAt
 });
 
-// 👇 ESTA É A LINHA CORRETA PARA EXPRESS
-const Client = mongoose.model('Client', clientSchema);
-export default Client;
+// Evita OverwriteModelError em hot-reload / múltiplos imports
+const Cliente = mongoose.models.Cliente || mongoose.model('Cliente', clienteSchema);
+
+export default Cliente;
