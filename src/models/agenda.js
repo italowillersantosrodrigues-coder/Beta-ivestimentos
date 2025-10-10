@@ -1,45 +1,71 @@
-import mongoose from 'mongoose';
+// src/models/Agenda.js
+import mongoose from "mongoose";
+const { Schema } = mongoose;
 
-const AgendaSchema = new mongoose.Schema({
-    // Referência ao cliente
-    client: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Client', 
-        required: true 
+const AgendaSchema = new Schema(
+  {
+    venda: { 
+      type: Schema.Types.ObjectId, 
+      ref: "Venda", 
+      required: false 
     },
-    // Referência à venda (parcela)
-    sale: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Sale', 
-        required: true 
-    },
-    // Nome do Lembrete/Parcela (Ex: "Parcela 1/4 - Venda #...")
-    description: { 
-        type: String, 
-        required: true 
-    }, 
-    dueDate: { // Data de Vencimento
-        type: Date, 
-        required: true 
-    }, 
-    amount: { // Valor da Parcela
-        type: Number, 
-        required: true 
-    },
-    status: { 
-        type: String, 
-        default: 'Em aberto', 
-        enum: ['Em aberto', 'Pago', 'Atrasado', 'Cancelado'] 
-    },
-    // Para controlar notificações futuras
-    isNotificationSent: { 
-        type: Boolean, 
-        default: false 
-    },
-    createdAt: { 
-        type: Date, 
-        default: Date.now 
-    },
-});
 
-export default mongoose.model('Agenda', AgendaSchema);
+    parcela: { 
+      type: Schema.Types.ObjectId, 
+      ref: "Parcela", // facilita o populate direto se houver model de parcelas
+      required: false 
+    },
+
+    titulo: { 
+      type: String, 
+      required: true 
+    },
+
+    descricao: { 
+      type: String, 
+      default: "" 
+    },
+
+    data: { 
+      type: Date, 
+      required: true 
+    },
+
+    status: { 
+      type: String, 
+      enum: ["agendado", "concluido", "cancelado"], 
+      default: "agendado" 
+    },
+
+    tipo: { 
+      type: String, 
+      enum: ["parcela", "venda_carne"], 
+      default: "parcela" 
+    },
+
+    valor: { 
+      type: Number, 
+      required: false 
+    },
+
+    clienteNome: { 
+      type: String, 
+      required: false 
+    },
+
+    clienteId: { 
+      type: Schema.Types.ObjectId, 
+      ref: "Cliente", 
+      required: false 
+    },
+
+    observacao: { 
+      type: String, 
+      default: "" 
+    }
+  },
+  { timestamps: true }
+);
+
+export default mongoose.models.Agenda || 
+  mongoose.model("Agenda", AgendaSchema, "agendas");

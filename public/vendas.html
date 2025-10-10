@@ -4,135 +4,28 @@
     <meta charset="UTF-8" />
     <title>Vendas - Beta Investimentos</title>
     <style>
-        /* O estilo a seguir é baseado no seu HTML de Produtos e aplicado aqui para consistência. */
-        body {
-            background: #111; /* Fundo mais escuro */
-            color: #fff;
-            font-family: "Segoe UI", Tahoma, sans-serif;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        header {
-            width: 100%;
-            background: #1c1c1c;
-            padding: 15px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.6);
-        }
-
-        header h1 { color: #4CAF50; font-size: 22px; }
-        .back-btn {
-            background: #4CAF50;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 18px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        .back-btn:hover { background: #45a049; }
-
-        .container {
-            width: 95%;
-            max-width: 950px;
-            background: #1e1e1e;
-            border-radius: 15px;
-            padding: 35px;
-            margin-top: 40px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
-            animation: fadeIn 0.6s ease;
-        }
-
-        h2 {
-            text-align: center;
-            color: #4CAF50;
-            margin-bottom: 25px;
-            font-size: 22px;
-        }
-
-        label { display: block; margin: 8px 0 4px; font-weight: 500; }
-
-        select, input {
-            width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 8px;
-            background: #2c2c2c;
-            color: #fff;
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-        
-        /* Ajuste do layout do formulário principal para ter duas colunas */
-        #formVenda > label:nth-child(1), #formVenda > select:nth-child(2),
-        #formVenda > label:nth-child(3), #formVenda > div:nth-child(4) {
-            margin-bottom: 15px; /* Adiciona espaçamento entre as seções */
-        }
-
-        button {
-            background: #4CAF50;
-            border: none;
-            border-radius: 8px;
-            color: #fff;
-            padding: 12px 20px;
-            cursor: pointer;
-            transition: 0.3s;
-            width: 100%;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-        button:hover { background: #45a049; }
-
-        .produto-item {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .produto-item select, .produto-item input { flex: 1; }
-        .produto-item button {
-            flex: 0.3;
-            background: #e53e3e;
-            padding: 10px; /* Ajuste para o botão Remover */
-            margin-top: 0;
-        }
-        .produto-item button:hover { background: #c53030; }
-
-        .hidden { display: none !important; }
-
-        .msg {
-            text-align: center;
-            font-size: 14px;
-            margin-top: 10px;
-        }
-
-        table {
-            width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-            background: #222;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #333;
-            text-align: left;
-        }
-        th { background: #333; color: #4CAF50; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        /* (estilo idêntico ao seu anterior) */
+        body { background: #111; color: #fff; font-family: "Segoe UI", Tahoma, sans-serif; margin:0; display:flex; flex-direction:column; align-items:center; min-height:100vh;}
+        header { width:100%; background:#1c1c1c; padding:15px 25px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.6); }
+        header h1 { color:#4CAF50; font-size:22px; }
+        .back-btn { background:#4CAF50; color:#fff; border:none; border-radius:8px; padding:10px 18px; cursor:pointer; transition:0.3s; }
+        .back-btn:hover { background:#45a049; }
+        .container { width:95%; max-width:950px; background:#1e1e1e; border-radius:15px; padding:35px; margin-top:40px; box-shadow:0 5px 20px rgba(0,0,0,0.5); animation:fadeIn 0.6s ease; }
+        h2 { text-align:center; color:#4CAF50; margin-bottom:25px; font-size:22px; }
+        label { display:block; margin:8px 0 4px; font-weight:500; }
+        select, input { width:100%; padding:10px; border:none; border-radius:8px; background:#2c2c2c; color:#fff; margin-bottom:10px; font-size:14px; }
+        button { background:#4CAF50; border:none; border-radius:8px; color:#fff; padding:12px 20px; cursor:pointer; transition:0.3s; width:100%; font-weight:bold; margin-top:10px; }
+        button:hover { background:#45a049; }
+        .produto-item { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+        .produto-item select, .produto-item input { flex:1; }
+        .produto-item button { flex:0.3; background:#e53e3e; padding:10px; margin-top:0; }
+        .produto-item button:hover { background:#c53030; }
+        .hidden { display:none !important; }
+        .msg { text-align:center; font-size:14px; margin-top:10px; }
+        table { width:100%; margin-top:20px; border-collapse:collapse; background:#222; border-radius:10px; overflow:hidden; }
+        th, td { padding:10px; border-bottom:1px solid #333; text-align:left; }
+        th { background:#333; color:#4CAF50; }
+        @keyframes fadeIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
     </style>
 </head>
 <body>
@@ -154,16 +47,15 @@
             <label>Método de Pagamento</label>
             <select id="metodoPagamento" required>
                 <option value="">Selecione</option>
-                <option value="avista">Pix (À Vista)</option> 
+                <option value="avista">Pix (À Vista)</option>
                 <option value="cartao">Cartão</option>
                 <option value="dinheiro">Dinheiro (À Vista)</option>
-                <option value="parcelado">Carnê (Parcelado)</option> 
+                <option value="parcelado">Carnê (Parcelado)</option>
             </select>
 
             <div id="grupoCarne" class="hidden">
                 <label>Parcelas</label>
                 <input type="number" id="qtdParcelas" placeholder="Quantidade de parcelas">
-                <input type="number" id="valorParcela" step="0.01" placeholder="Valor de cada parcela (R$)" class="hidden"> 
                 <input type="date" id="primeiroVencimento" placeholder="Data do primeiro vencimento">
             </div>
 
@@ -184,18 +76,17 @@
                 <tr><th>#</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr>
             </thead>
             <tbody></tbody>
-            </table>
+        </table>
     </div>
 
     <script>
         let produtosCache = [];
-        let clientesCache = []; // Adiciona cache de clientes
+        let clientesCache = [];
         let vendaSalva = null;
 
         const BRL = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 
-        // ========== CARREGAR CLIENTES ==========
-        async function carregarClientes() {
+        async function carregarClientes(){
             try {
                 const r = await fetch("/api/clientes");
                 clientesCache = await r.json();
@@ -207,14 +98,16 @@
             }
         }
 
-        // ========== CARREGAR PRODUTOS ==========
-        async function carregarProdutos() {
-            const r = await fetch("/api/produtos");
-            produtosCache = await r.json();
+        async function carregarProdutos(){
+            try {
+                const r = await fetch("/api/produtos");
+                produtosCache = await r.json();
+            } catch {
+                produtosCache = [];
+            }
         }
 
-        // ========== ADICIONAR PRODUTO ==========
-        function adicionarProduto() {
+        function adicionarProduto(){
             if (produtosCache.length === 0) return alert("Nenhum produto disponível!");
             const div = document.createElement("div");
             div.className = "produto-item";
@@ -230,8 +123,7 @@
             atualizarTotal();
         }
 
-        // ========== CALCULAR TOTAL ==========
-        function atualizarTotal() {
+        function atualizarTotal(){
             let total = 0;
             document.querySelectorAll(".produto-item").forEach(div => {
                 const id = div.querySelector("select").value;
@@ -239,16 +131,12 @@
                 const produto = produtosCache.find(p => p._id === id);
                 if (produto) total += (Number(produto.preco) || 0) * qtd;
             });
-            
             const totalArredondado = Math.round(total * 100) / 100;
-            
             document.getElementById("totalVenda").value = BRL(totalArredondado);
-            
             if (document.getElementById("metodoPagamento").value === "parcelado")
                 atualizarParcelas(totalArredondado);
         }
 
-        // ========== ATUALIZAR PARCELAS (Lógica omitida para brevidade, mas está no seu código) ==========
         function atualizarParcelas(totalVenda) {
             const qtd = Number(document.getElementById("qtdParcelas").value);
             const total = totalVenda || Number(document.getElementById("totalVenda").value.replace(/[^\d,.-]/g, "").replace(",", "."));
@@ -256,27 +144,20 @@
             const tabela = document.getElementById("tabelaParcelas");
             const corpo = tabela.querySelector("tbody");
             corpo.innerHTML = "";
-            
             if (!qtd || isNaN(total) || !dataInicial) {
                 tabela.classList.add("hidden");
                 return;
             }
-            
             const valorParcela = Math.round((total / qtd) * 100) / 100;
-            
             const inicio = new Date(dataInicial);
-            
             for (let i = 1; i <= qtd; i++) {
                 const venc = new Date(inicio);
-                venc.setMonth(venc.getMonth() + i - 1); 
+                venc.setMonth(venc.getMonth() + i - 1);
                 corpo.innerHTML += `<tr><td>${i}</td><td>${venc.toLocaleDateString()}</td><td>${BRL(valorParcela)}</td><td>Em aberto</td></tr>`;
             }
-            
             tabela.classList.remove("hidden");
         }
 
-
-        // ========== ALTERAR MÉTODO DE PAGAMENTO (Lógica omitida para brevidade, mas está no seu código) ==========
         document.addEventListener("change", e => {
             if (e.target.id === "metodoPagamento") {
                 const parcelado = e.target.value === "parcelado";
@@ -284,7 +165,6 @@
                 document.getElementById("tabelaParcelas").classList.toggle("hidden", !parcelado);
                 atualizarTotal();
             }
-            
             if (e.target.id === "qtdParcelas" || e.target.id === "primeiroVencimento") {
                 if (document.getElementById("metodoPagamento").value === "parcelado") {
                     atualizarParcelas();
@@ -292,114 +172,117 @@
             }
         });
 
-        // ========== SALVAR VENDA (CORRIGIDO PARA ENVIAR UNITPRICE E DESCRIPTION) ==========
+        async function salvarVenda(payload) {
+            const resp = await fetch("/api/vendas", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const json = await resp.json().catch(()=>({error:'Resposta inválida'}));
+            if (!resp.ok) throw new Error(json.error || 'Erro ao salvar');
+            return json;
+        }
+
         document.getElementById("formVenda").addEventListener("submit", async e => {
             e.preventDefault();
             try {
                 const clienteId = document.getElementById("clienteSelect").value;
                 if (!clienteId) return alert("Selecione um cliente.");
 
-                // 1. CONSTRUIR O ARRAY 'items' INCLUINDO unitPrice E description
-                const items = []; 
+                const items = [];
                 document.querySelectorAll(".produto-item").forEach(div => {
                     const id = div.querySelector("select").value;
-                    const qtd = Number(div.querySelector("input[type='number']").value); 
+                    const qtd = Number(div.querySelector("input[type='number']").value);
                     const produto = produtosCache.find(p => p._id === id);
-                    
                     if (id && qtd > 0 && produto) {
-                        items.push({ 
-                            product: id, 
+                        items.push({
+                            product: id,
                             quantity: qtd,
                             unitPrice: Number(produto.preco),
-                            description: produto.nome || `Produto ID: ${id}` 
+                            description: produto.nome || `Produto ID: ${id}`
                         });
                     }
                 });
-                
                 if (items.length === 0) return alert("Adicione pelo menos um produto válido.");
 
-                // 2. CONSTRUIR O OBJETO (PAYLOAD)
                 const paymentType = document.getElementById("metodoPagamento").value;
-                
                 const payload = {
-                    client: clienteId, 
-                    items: items, 
-                    paymentType: paymentType, 
+                    client: clienteId,
+                    items,
+                    paymentType
                 };
 
-                // 3. ADICIONAR DADOS DE PARCELA SE FOR CARNÊ
                 if (paymentType === "parcelado") {
-                    payload.installmentsCount = Number(document.getElementById("qtdParcelas").value); 
-                    payload.firstDueDate = document.getElementById("primeiroVencimento").value; 
+                    payload.installmentsCount = Number(document.getElementById("qtdParcelas").value);
+                    payload.firstDueDate = document.getElementById("primeiroVencimento").value;
                     if (!payload.installmentsCount || !payload.firstDueDate) {
                         return alert("Preencha a quantidade de parcelas e a data do primeiro vencimento.");
                     }
                 }
-                
-                const resp = await fetch("/api/vendas", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload) 
-                });
 
-                if (!resp.ok) {
-                    const errorJson = await resp.json().catch(() => ({ error: 'Erro de servidor desconhecido' }));
-                    throw new Error(errorJson.error || "Falha ao salvar venda");
+                const respJson = await salvarVenda(payload);
+
+                // normalizar resposta para frontend (compatibilidade)
+                // alguns endpoints antigos retornavam: { venda, client, totalAmount, vendaId }
+                // o nosso novo router retorna: { ok:true, venda: { ... } }
+                const norma = {};
+                if (respJson.venda) {
+                    norma.venda = respJson.venda;
+                    norma.client = String(respJson.venda.cliente_id || respJson.venda.client || respJson.client || "");
+                    norma.totalAmount = respJson.venda.total || respJson.totalAmount || 0;
+                    norma.vendaId = String(respJson.venda._id || respJson.vendaId || "");
+                } else {
+                    // fallback
+                    norma.venda = respJson;
+                    norma.client = respJson.client || respJson.clientId || "";
+                    norma.totalAmount = respJson.totalAmount || respJson.total || 0;
+                    norma.vendaId = respJson.vendaId || respJson._id || "";
                 }
 
-                vendaSalva = await resp.json();
+                vendaSalva = norma; // formato usado pelo resto do front
                 mostrarMensagem("✅ Venda salva com sucesso!", "green");
                 document.getElementById("btnEmail").classList.remove("hidden");
-
             } catch (err) {
                 console.error("Erro ao salvar venda:", err);
                 mostrarMensagem("❌ Erro ao salvar venda. Verifique o console do navegador.", "red");
             }
         });
 
-        // ========== ENVIAR CONFIRMAÇÃO POR EMAIL (CORRIGIDO) ==========
         document.getElementById("btnEmail").addEventListener("click", async () => {
             if (!vendaSalva) return alert("Salve a venda antes de enviar o e-mail.");
-            
-            // CORREÇÃO: Busca o cliente na memória (cache) pelo ID retornado na venda
-            const cliente = clientesCache.find(c => c._id === vendaSalva.client);
-
-            if (!cliente || !cliente.email) {
+            const clienteObj = clientesCache.find(c => String(c._id) === String(vendaSalva.client) || String(c._id) === String((vendaSalva.venda && vendaSalva.venda.cliente_id)));
+            if (!clienteObj || !clienteObj.email) {
                 return mostrarMensagem("❌ Cliente não encontrado ou e-mail indisponível.", "red");
             }
-
             try {
                 const resp = await fetch(`/api/notifications/email`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        to: cliente.email, // Usa o e-mail do cliente encontrado no cache
+                        to: clienteObj.email,
                         subject: "Confirmação de Venda - Beta Investimentos",
-                        message: `Olá ${cliente.nome}, sua compra no valor total de ${BRL(vendaSalva.totalAmount)} foi registrada com sucesso!`
+                        message: `Olá ${clienteObj.nome}, sua compra no valor total de ${BRL(vendaSalva.totalAmount || (vendaSalva.venda && vendaSalva.venda.total))} foi registrada com sucesso!`
                     })
                 });
-                
-                if (!resp.ok) throw new Error();
+                if (!resp.ok) throw new Error("Erro no envio");
                 mostrarMensagem("📧 E-mail de confirmação enviado!", "green");
-            } catch {
-                mostrarMensagem("❌ Erro ao enviar e-mail. Verifique se o seu backend de notificação está funcionando.", "red");
+            } catch (err) {
+                console.error("Erro enviar e-mail:", err);
+                mostrarMensagem("❌ Erro ao enviar e-mail. Verifique se o backend de notificações está funcionando.", "red");
             }
         });
 
-        // ========== MENSAGENS ==========
         function mostrarMensagem(txt, cor="white") {
             const m = document.getElementById("mensagem");
             m.style.color = cor;
             m.textContent = txt;
-            setTimeout(() => m.textContent = "", 4000);
+            setTimeout(()=> m.textContent = "", 4500);
         }
 
-        // ========== INICIALIZAÇÃO ==========
+        // inicializar
         carregarClientes();
         carregarProdutos();
-        
-        // Timeout para garantir que o total seja atualizado caso o cliente já tenha produtos salvos
-        setTimeout(atualizarTotal, 500); 
+        setTimeout(atualizarTotal, 500);
     </script>
 </body>
 </html>

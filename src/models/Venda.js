@@ -1,20 +1,24 @@
+// src/models/Venda.js
 import mongoose from "mongoose";
+const { Schema } = mongoose;
 
-const parcelaSchema = new mongoose.Schema({
-  numero: Number,
-  valor: Number,
-  vencimento: Date,
+const ParcelaSchema = new Schema({
+  numero: { type: Number, required: true },
+  valor: { type: Number, required: true },
+  vencimento: { type: Date, required: true },
   status: { type: String, default: "pendente" },
-  enviado_email: { type: Boolean, default: false },
-});
+  enviado_email: { type: Boolean, default: false }
+}, { _id: true });
 
-const vendaSchema = new mongoose.Schema({
-  cliente_id: { type: mongoose.Schema.Types.ObjectId, ref: "Cliente" },
+const VendaSchema = new Schema({
+  cliente_id: { type: Schema.Types.ObjectId, ref: "Cliente", required: false },
   total: { type: Number, required: true },
-  tipo_pagamento: { type: String, enum: ["à vista", "parcelado"], required: true },
-  parcelas: [parcelaSchema],
+  tipo_pagamento: { type: String, enum: ["à vista", "parcelado", "carne", "cartao", "pix", "dinheiro"], required: true },
+  parcelas: { type: [ParcelaSchema], default: [] },
   status: { type: String, default: "aberta" },
   criado_em: { type: Date, default: Date.now },
-});
+  observacao: { type: String }
+}, { timestamps: true });
 
-export default mongoose.model("Venda", vendaSchema);
+// Força collection 'vendas' (evita confusão com 'sales')
+export default mongoose.models.Venda || mongoose.model("Venda", VendaSchema, "vendas");
