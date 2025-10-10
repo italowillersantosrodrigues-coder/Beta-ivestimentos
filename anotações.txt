@@ -7,7 +7,7 @@ npm install express cors body-parser sqlite3 nodemailer
 git status
 git add .
 git commit -m "atualização correções vendas"
-git push origin master
+git push origin main
 
 
 tem que atualizar os html e o login .js para fubniconar 
