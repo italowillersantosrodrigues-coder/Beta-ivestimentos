@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Relatórios - Beta Investimentos</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Tailwind (v2 CDN) -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Tema escuro consistente com a screenshot */
+    :root{
+      --bg-90: #070707;
+      --panel: #171717;
+      --panel-2: #1f1f1f;
+      --muted: #97a089; /* leve verde acinzentado */
+      --accent: #26A84B; /* verde principal */
+      --card-shadow: 0 8px 20px rgba(0,0,0,0.6);
+    }
+
+    body {
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(40,40,40,0.08), transparent),
+                  linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.85));
+      background-color: var(--bg-90);
+      color: #e6e6e6;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+    }
+
+    /* Topbar */
+    .topbar {
+      background: linear-gradient(180deg, rgba(20,20,20,0.9), rgba(18,18,18,0.8));
+      border-bottom: 1px solid rgba(255,255,255,0.02);
+      padding: 14px 22px;
+      display:flex;
+      align-items:center;
+      gap:18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+    }
+    .logo {
+      display:flex; align-items:center; gap:10px;
+      color:var(--accent);
+      font-weight:700;
+      font-size:18px;
+    }
+    .logo svg { filter: drop-shadow(0 2px 6px rgba(0,0,0,0.7)); }
+
+    /* Container */
+    .container {
+      max-width: 1150px;
+      margin: 28px auto;
+      padding: 0 20px 60px;
+    }
+
+    /* Panels / cards */
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: var(--card-shadow);
+      border: 1px solid rgba(255,255,255,0.02);
+    }
+
+    .control-btn {
+      background: rgba(40,40,40,0.6);
+      border: 1px solid rgba(255,255,255,0.03);
+      color: #dfeee0;
+    }
+
+    .pill {
+      background: rgba(38,168,75,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(38,168,75,0.16);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight:600;
+    }
+
+    /* cards resumo com destaque verde */
+    .summary-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+      border-radius: 12px;
+      padding: 18px;
+      border: 1px solid rgba(255,255,255,0.02);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.55);
+    }
+    .summary-card .value { font-size: 1.6rem; font-weight:700; color:#e8f5ec; }
+    .summary-card .label { color: var(--muted); font-size:0.85rem; }
+
+    /* tabela escura */
+    table { border-collapse: collapse; width:100%; }
+    thead th { color: #cfead0; font-weight:700; font-size:0.9rem; padding:12px; text-align:left; background: rgba(255,255,255,0.02); border-bottom:1px solid rgba(255,255,255,0.02); }
+    tbody td { padding:10px; border-bottom:1px solid rgba(255,255,255,0.02); color:#dbeeda; }
+
+    /* botões principais */
+    .btn-primary {
+      background: linear-gradient(180deg, var(--accent), #1f8a3a);
+      color: #06210b;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight:700;
+      border: none;
+      box-shadow: 0 6px 14px rgba(38,168,75,0.12);
+    }
+
+    /* small helpers */
+    .muted { color: var(--muted); font-size:0.95rem; }
+    .section-title { font-weight:700; color:#eaf7ea; margin-bottom:8px; }
+
+    /* responsive tweaks */
+    @media (max-width: 900px){
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="logo">
+      <!-- pequeno ícone parecendo gráfico -->
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 17h3v4H3zM9 11h3v10H9zM15 7h3v14h-3z" fill="var(--accent)"/>
+        <rect x="1" y="1" width="22" height="22" rx="3" stroke="rgba(255,255,255,0.03)" fill="rgba(0,0,0,0)"/>
+      </svg>
+      β Beta Investimentos
+    </div>
+
+    <div style="flex:1"></div>
+
+    <div style="display:flex; gap:12px; align-items:center;">
+      <div class="muted" style="font-weight:600">Relatórios</div>
+      <button class="pill" title="Usuário">Admin</button>
+      <button class="btn-primary" onclick="location.href='/logout'">Sair</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- header + intro -->
+    <header class="mb-6">
+      <h1 class="text-2xl section-title">Relatórios de Vendas</h1>
+      <p class="muted">Filtre por período e veja resumos por produto, cliente e períodos (diário / semanal / mensal).</p>
+    </header>
+
+    <!-- filtros -->
+    <div class="panel mb-6">
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="muted">Período</label>
+        <input id="from" type="date" class="control-btn p-2 rounded border-transparent" />
+        <input id="to" type="date" class="control-btn p-2 rounded border-transparent" />
+
+        <select id="granularity" class="control-btn p-2 rounded">
+          <option value="day">Diário</option>
+          <option value="week">Semanal</option>
+          <option value="month" selected>Mensal</option>
+        </select>
+
+        <div class="flex items-center space-x-2 ml-2">
+          <button id="preset7" class="control-btn px-3 py-2 rounded">Últimos 7 dias</button>
+          <button id="preset30" class="control-btn px-3 py-2 rounded">Últimos 30 dias</button>
+          <button id="thisMonth" class="control-btn px-3 py-2 rounded">Este mês</button>
+          <button id="lastMonth" class="control-btn px-3 py-2 rounded">Mês anterior</button>
+        </div>
+
+        <div style="flex:1"></div>
+
+        <button id="exportCsv" class="control-btn px-3 py-2 rounded mr-2">Exportar CSV</button>
+        <button id="buscar" class="btn-primary">Buscar</button>
+      </div>
+    </div>
+
+    <!-- resumo cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 grid-4">
+      <div class="summary-card">
+        <div class="label">Total de vendas</div>
+        <div id="cardVendas" class="value mt-2">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Receita</div>
+        <div id="cardReceita" class="value mt-2">R$ 0,00</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Ticket médio</div>
+        <div id="cardTicket" class="value mt-2">R$ 0,00</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Melhor período</div>
+        <div id="cardMelhor" class="value mt-2">—</div>
+      </div>
+    </div>
+
+    <!-- gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 grid-2">
+      <div class="panel">
+        <h3 class="section-title">Receita por período</h3>
+        <canvas id="chartPeriod" height="140"></canvas>
+      </div>
+
+      <div class="panel">
+        <h3 class="section-title">Top produtos (receita)</h3>
+        <canvas id="chartProducts" height="140"></canvas>
+      </div>
+
+      <div class="panel lg:col-span-2">
+        <h3 class="section-title">Top clientes (receita)</h3>
+        <canvas id="chartClients" height="110"></canvas>
+      </div>
+    </div>
+
+    <!-- tabela -->
+    <div class="panel mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="section-title">Lista de vendas</h3>
+        <div class="muted">Página <span id="pageNum">1</span></div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table id="salesTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cliente</th>
+              <th>Total</th>
+              <th>Tipo</th>
+              <th>Status</th>
+              <th>Data</th>
+            </tr>
+          </thead>
+          <tbody id="salesBody">
+            <!-- preenchido por JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <button id="prevPage" class="control-btn px-3 py-1 rounded">Anterior</button>
+          <button id="nextPage" class="control-btn px-3 py-1 rounded">Próxima</button>
+        </div>
+        <div class="muted">Exibindo <span id="rowsCount">0</span> vendas</div>
+      </div>
+    </div>
+
+    <footer class="text-center muted">
+      Beta Investimentos — Relatórios
+    </footer>
+  </div>
+
+<script>
+  // ---------- helpers ----------
+  function fmtCurrency(v){
+    return new Intl.NumberFormat('pt-BR',{style:'currency', currency:'BRL'}).format(v || 0);
+  }
+  function isoDateInput(d) {
+    const pad = (n)=> String(n).padStart(2,'0');
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  }
+
+  // ---------- DOM ----------
+  const fromEl = document.getElementById('from');
+  const toEl = document.getElementById('to');
+  const granEl = document.getElementById('granularity');
+  const buscarBtn = document.getElementById('buscar');
+  const exportBtn = document.getElementById('exportCsv');
+
+  // set defaults (últimos 30 dias)
+  (function initDates(){
+    const to = new Date();
+    const from = new Date();
+    from.setDate(to.getDate() - 29);
+    fromEl.value = isoDateInput(from);
+    toEl.value = isoDateInput(to);
+  })();
+
+  // chart instances
+  let chartPeriod = null, chartProducts = null, chartClients = null;
+
+  // ---------- fake fetch helpers (substitua pelas suas APIs) ----------
+  // OBS: Aqui deixei chamadas reais para /api/... como no seu exemplo original.
+  // Caso queira testar sem backend, substitua as funções abaixo por retornos falsos.
+  async function fetchSummary(from, to, granularity){
+    const url = `/api/relatorios/summary?from=${from}&to=${to}&granularity=${granularity}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('Erro ao buscar summary');
+    return await res.json();
+  }
+  async function fetchByProduct(from,to,top=10){
+    const url = `/api/relatorios/by-product?from=${from}&to=${to}&top=${top}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('Erro por produto');
+    return await res.json();
+  }
+  async function fetchByClient(from,to,top=10){
+    const url = `/api/relatorios/by-client?from=${from}&to=${to}&top=${top}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('Erro por cliente');
+    return await res.json();
+  }
+  async function fetchList(from,to,page=1,limit=50){
+    const url = `/api/relatorios/list?from=${from}&to=${to}&page=${page}&limit=${limit}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('Erro na lista');
+    return await res.json();
+  }
+
+  // ---------- render functions ----------
+  function renderCards(summary){
+    document.getElementById('cardVendas').innerText = summary.total_vendas || 0;
+    document.getElementById('cardReceita').innerText = fmtCurrency(summary.receita || 0);
+    const media = (summary.total_vendas ? (summary.receita / summary.total_vendas) : 0);
+    document.getElementById('cardTicket').innerText = fmtCurrency(media);
+    document.getElementById('cardMelhor').innerText = summary.bestPeriodLabel || '—';
+  }
+
+  function renderPeriodChart(data){
+    const labels = (data.byPeriod || []).map(x => {
+      const d = new Date(x.periodo);
+      return (granEl.value === 'month') ? (d.toLocaleString('pt-BR',{month:'short', year:'numeric'})) : d.toLocaleDateString();
+    });
+    const values = (data.byPeriod || []).map(x => Number(x.receita || 0));
+    const ctx = document.getElementById('chartPeriod').getContext('2d');
+    if(chartPeriod) chartPeriod.destroy();
+    chartPeriod = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Receita',
+          data: values,
+          fill: true,
+          tension: 0.24,
+          borderColor: '#26A84B',
+          backgroundColor: 'rgba(38,168,75,0.12)',
+          pointBackgroundColor: '#26A84B',
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive:true,
+        plugins:{ legend:{display:false} },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.02)' }, ticks: { color: '#cfead0' } },
+          y: { grid: { color: 'rgba(255,255,255,0.02)' }, ticks: { color: '#cfead0' } }
+        }
+      }
+    });
+  }
+
+  function renderBarChart(canvasId, labels, values, title){
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    if(canvasId === 'chartProducts' && chartProducts) chartProducts.destroy();
+    if(canvasId === 'chartClients' && chartClients) chartClients.destroy();
+
+    const cfg = {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: title,
+          data: values,
+          borderRadius: 6,
+          backgroundColor: '#26A84B'
+        }]
+      },
+      options: {
+        responsive:true,
+        plugins:{ legend:{display:false} },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.02)' }, ticks: { color: '#cfead0' } },
+          y: { grid: { color: 'rgba(255,255,255,0.02)' }, ticks: { color: '#cfead0' } }
+        }
+      }
+    };
+    if(canvasId === 'chartProducts') chartProducts = new Chart(ctx, cfg);
+    else chartClients = new Chart(ctx, cfg);
+  }
+
+  // ---------- sales table ----------
+  let currentPage = 1;
+  async function loadSalesTable(){
+    try {
+      const from = fromEl.value, to = toEl.value;
+      const data = await fetchList(from, to, currentPage, 50);
+      document.getElementById('pageNum').innerText = data.page || currentPage;
+      document.getElementById('rowsCount').innerText = (data.vendas || []).length;
+      const tbody = document.getElementById('salesBody');
+      tbody.innerHTML = (data.vendas || []).map((v, idx) => `
+        <tr>
+          <td>${((data.page-1)||0)*data.limit + idx + 1}</td>
+          <td>${v.cliente || ''}</td>
+          <td>${fmtCurrency(v.total || 0)}</td>
+          <td>${v.tipo || ''}</td>
+          <td>${v.status || ''}</td>
+          <td>${new Date(v.criado_em).toLocaleString()}</td>
+        </tr>
+      `).join('');
+    } catch(err){
+      console.error(err);
+      // se falhar, mostra vazio (não trava a interface)
+      document.getElementById('salesBody').innerHTML = '<tr><td colspan="6" class="muted">Sem dados ou erro ao carregar.</td></tr>';
+    }
+  }
+
+  // ---------- orchestrator ----------
+  async function updateAll(){
+    try {
+      buscarBtn.disabled = true;
+      const from = fromEl.value, to = toEl.value, gran = granEl.value;
+      const [summary, prod, clients] = await Promise.all([
+        fetchSummary(from, to, gran),
+        fetchByProduct(from, to, 10),
+        fetchByClient(from, to, 10),
+      ]);
+      renderCards(summary);
+      renderPeriodChart(summary);
+      renderBarChart('chartProducts', (prod.rows||[]).map(r=>r._id), (prod.rows||[]).map(r=>r.receita), 'Receita');
+      renderBarChart('chartClients', (clients.rows||[]).map(r=>r._id), (clients.rows||[]).map(r=>r.receita), 'Receita');
+      currentPage = 1;
+      await loadSalesTable();
+    } catch(err){
+      console.error(err);
+      alert('Erro ao carregar relatórios. Veja console.');
+    } finally {
+      buscarBtn.disabled = false;
+    }
+  }
+
+  // presets
+  document.getElementById('preset7').addEventListener('click', ()=>{
+    const to = new Date();
+    const from = new Date(); from.setDate(to.getDate()-6);
+    fromEl.value = isoDateInput(from); toEl.value = isoDateInput(to);
+  });
+  document.getElementById('preset30').addEventListener('click', ()=>{
+    const to = new Date();
+    const from = new Date(); from.setDate(to.getDate()-29);
+    fromEl.value = isoDateInput(from); toEl.value = isoDateInput(to);
+  });
+  document.getElementById('thisMonth').addEventListener('click', ()=>{
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    const to = new Date();
+    fromEl.value = isoDateInput(from); toEl.value = isoDateInput(to);
+  });
+  document.getElementById('lastMonth').addEventListener('click', ()=>{
+    const now = new Date();
+    const firstLast = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    const lastLast = new Date(now.getFullYear(), now.getMonth(), 0);
+    fromEl.value = isoDateInput(firstLast); toEl.value = isoDateInput(lastLast);
+  });
+
+  buscarBtn.addEventListener('click', updateAll);
+
+  // pagination
+  document.getElementById('prevPage').addEventListener('click', async ()=>{
+    if(currentPage>1) { currentPage--; await loadSalesTable(); document.getElementById('pageNum').innerText = currentPage; }
+  });
+  document.getElementById('nextPage').addEventListener('click', async ()=>{
+    currentPage++; await loadSalesTable(); document.getElementById('pageNum').innerText = currentPage;
+  });
+
+  // export CSV (lista current period, all pages)
+  exportBtn.addEventListener('click', async ()=>{
+    const from = fromEl.value, to = toEl.value;
+    try {
+      const res = await fetch(`/api/relatorios/list?from=${from}&to=${to}&page=1&limit=10000`);
+      if(!res.ok) throw new Error('Erro export');
+      const data = await res.json();
+      const rows = data.vendas || [];
+      if(!rows.length){ alert('Sem vendas no período'); return; }
+      const csv = [
+        ['_id','cliente','total','tipo','status','criado_em'],
+        ...rows.map(r => [r._id, (r.cliente||''), (r.total||0), (r.tipo||''), (r.status||''), (new Date(r.criado_em)).toLocaleString()])
+      ].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `relatorios_${from}_${to}.csv`; a.click();
+      URL.revokeObjectURL(url);
+    } catch(err){
+      console.error(err);
+      alert('Erro ao gerar CSV. Veja console.');
+    }
+  });
+
+  // initial load
+  updateAll();
+</script>
+</body>
+</html>

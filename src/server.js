@@ -1,4 +1,4 @@
-// src/server.js
+// =================== src/server.js ===================
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -8,11 +8,11 @@ import cors from "cors";
 import helmet from "helmet";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import "./db/mongo.js"; // Conexão com o MongoDB (executa ao importar)
+import "./db/mongo.js"; // Conexão com MongoDB
 
 import User from "./models/User.js";
 
-// ===== Rotas da aplicação =====
+// ===== Importa todas as rotas principais =====
 import authRouter from "./routes/auth.js";
 import clientsRouter from "./routes/clients.js";
 import productsRouter from "./routes/products.js";
@@ -27,12 +27,14 @@ const PORT = process.env.PORT || 3000;
 // ================= MIDDLEWARES =================
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: false, // evita bloqueios em dev
   })
 );
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve arquivos estáticos da pasta "public"
 app.use(express.static(path.join(process.cwd(), "public")));
 
 // =================== AUTENTICAÇÃO JWT ===================
@@ -42,11 +44,11 @@ function autenticarToken(req, res, next) {
     if (!authHeader) return res.status(401).json({ error: "Token não fornecido" });
 
     const token = authHeader.split(" ")[1];
-    if (!token) return res.status(401).json({ error: "Token não fornecido" });
+    if (!token) return res.status(401).json({ error: "Token inválido" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev_secret");
     req.user = decoded;
-    return next();
+    next();
   } catch (err) {
     console.error("Erro ao verificar token:", err?.message || err);
     return res.status(401).json({ error: "Token inválido" });
@@ -55,13 +57,12 @@ function autenticarToken(req, res, next) {
 
 // =================== ROTAS DE AUTENTICAÇÃO ===================
 
-// Registro: cria senhaHash e salva
+// Registro de usuário
 app.post("/api/auth/register", async (req, res) => {
   try {
     const { nome, email, senha } = req.body;
-    if (!nome || !email || !senha) {
+    if (!nome || !email || !senha)
       return res.status(400).json({ error: "Preencha todos os campos" });
-    }
 
     const existente = await User.findOne({ email });
     if (existente) return res.status(400).json({ error: "Email já cadastrado" });
@@ -69,12 +70,15 @@ app.post("/api/auth/register", async (req, res) => {
     const senhaHash = await bcrypt.hash(senha, 10);
     const novo = await User.create({ nome, email, senhaHash });
 
-    const retorno = { ...novo.toObject() };
+    const retorno = novo.toObject();
     delete retorno.senhaHash;
     delete retorno.passwordHash;
     delete retorno.senha;
 
-    return res.status(201).json({ message: "Usuário registrado com sucesso", user: retorno });
+    return res.status(201).json({
+      message: "Usuário registrado com sucesso",
+      user: retorno,
+    });
   } catch (err) {
     console.error("Erro ao registrar:", err);
     return res.status(500).json({ error: "Erro no servidor" });
@@ -85,16 +89,19 @@ app.post("/api/auth/register", async (req, res) => {
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: "Informe email e senha" });
+    if (!email || !password)
+      return res.status(400).json({ error: "Informe email e senha" });
 
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ error: "Usuário não encontrado" });
 
-    const storedHash = User.getAnyHash(user);
-    if (!storedHash) {
-      console.error("Login falhou: usuário sem hash de senha (email):", user.email);
-      return res.status(403).json({ error: "Conta sem senha configurada. Solicite redefinição de senha." });
-    }
+    const storedHash =
+      typeof User.getAnyHash === "function" ? User.getAnyHash(user) : user.senhaHash;
+
+    if (!storedHash)
+      return res
+        .status(403)
+        .json({ error: "Conta sem senha configurada. Solicite redefinição." });
 
     const ok = await bcrypt.compare(password, storedHash);
     if (!ok) return res.status(401).json({ error: "Senha incorreta" });
@@ -117,26 +124,22 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-// Mantém rota admin importada
+// =================== OUTRAS ROTAS DO SISTEMA ===================
 app.use("/api/admin", authRouter);
-
-// =================== ROTAS DO SISTEMA ===================
-
-// 🔧 Corrigido para alinhar com o frontend
-// O frontend chama /api/clientes, então adicionamos um alias:
-app.use("/api/clientes", clientsRouter); // ✅ novo alias
-app.use("/api/clients", clientsRouter);  // ✅ mantém compatibilidade anterior
-
+app.use("/api/clientes", clientsRouter);
+app.use("/api/clients", clientsRouter); // compatibilidade antiga
 app.use("/api/produtos", productsRouter);
 app.use("/api/vendas", salesRouter);
 app.use("/api/relatorios", reportsRouter);
 app.use("/api/monitor", monitorRouter);
 app.use("/api/templates", templatesRouter);
 
-// Rota protegida de perfil
+// =================== PERFIL ===================
 app.get("/api/perfil", autenticarToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-senhaHash -passwordHash -senha");
+    const user = await User.findById(req.user.id).select(
+      "-senhaHash -passwordHash -senha"
+    );
     if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
     return res.json(user);
   } catch (err) {
@@ -145,18 +148,28 @@ app.get("/api/perfil", autenticarToken, async (req, res) => {
   }
 });
 
-// =================== FRONTEND ===================
+// =================== FRONTEND (HTMLs) ===================
 app.get("/", (req, res) => {
   res.sendFile(path.join(process.cwd(), "public", "Login.html"));
 });
 
-const paginas = ["menu", "clientes", "produtos", "vendas", "agenda"];
+// Adiciona todas as páginas HTML conhecidas
+const paginas = [
+  "menu",
+  "clientes",
+  "produtos",
+  "vendas",
+  "agenda",
+  "relatorios",
+  "monitoramento", // adicionada para evitar erro ENOENT
+];
 paginas.forEach((p) => {
   app.get(`/${p}.html`, (req, res) => {
     res.sendFile(path.join(process.cwd(), "public", `${p}.html`));
   });
 });
 
+// Fallback: redireciona para Login.html
 app.use((req, res) => {
   res.status(404).sendFile(path.join(process.cwd(), "public", "Login.html"));
 });
@@ -167,6 +180,7 @@ const server = app.listen(PORT, () => {
   console.log(`🌐 Ambiente: ${process.env.NODE_ENV || "desenvolvimento"}`);
 });
 
+// =================== HANDLERS GLOBAIS ===================
 process.on("uncaughtException", (err) => {
   console.error("uncaughtException:", err);
 });

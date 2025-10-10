@@ -1,117 +1,122 @@
-// src/routes/sales.js
-
-import express from 'express';
-import Product from '../models/product.js'; 
-import Sale from '../models/Sale.js';
-import Client from '../models/client.js'; 
-import Agenda from '../models/Agenda.js'; // Importação do modelo Mongoose Agenda
+// routes/sales.js (substitua a rota POST existente por esta versão)
+import express from "express";
+import Venda from "../models/Venda.js";
+import Cliente from "../models/Cliente.js";
+import { agendarCobranca } from "../utils/agenda.js";
 
 const router = express.Router();
 
-// Rota POST para Criar Nova Venda (e integrar com Agenda/Lembretes)
-router.post('/', async (req, res) => {
-    try {
-        const { 
-            client, 
-            items = [], 
-            paymentType, 
-            installmentsCount = 0, 
-            firstDueDate 
-        } = req.body;
+function gerarParcelas(total, parcelas, primeiraDataStr) {
+  const valorBase = Math.round((total / parcelas) * 100) / 100;
+  const primeiraData = new Date(primeiraDataStr);
+  return Array.from({ length: parcelas }, (_, i) => {
+    const due = new Date(primeiraData);
+    due.setMonth(due.getMonth() + i);
+    return { numero: i + 1, valor: valorBase, vencimento: due };
+  });
+}
 
-        // --- 1. VALIDAÇÃO BÁSICA ---
-        if (!client) return res.status(400).json({ error: 'Cliente é obrigatório.' });
-        if (!paymentType) return res.status(400).json({ error: 'Tipo de pagamento é obrigatório.' });
+router.post("/", async (req, res) => {
+  try {
+    // Aceita ambos os formatos: { cliente_id, total, tipo_pagamento, ... }
+    // ou { client, items: [...], paymentType, installmentsCount, firstDueDate }
+    const body = req.body || {};
 
-        const validItems = items.filter(it => it.product && Number(it.quantity) > 0);
-        if (validItems.length === 0) {
-            return res.status(400).json({ error: 'Nenhum produto válido foi incluído na venda.' });
-        }
+    // cliente
+    const clienteId = body.cliente_id || body.client || body.clientId;
+    if (!clienteId) return res.status(400).json({ error: "cliente_id (ou client) é obrigatório" });
 
-        let totalAmount = 0;
-        const processedItems = await Promise.all(validItems.map(async (it) => {
-            
-            const product = await Product.findById(it.product);
-            
-            // CORREÇÃO NAN: Garante que unitPrice é um número válido.
-            const unitPrice = Number(it.unitPrice) || (product ? Number(product.preco) : 0);
-            const qty = Number(it.quantity) || 1; 
-            
-            // Calcula o total do item e arredonda
-            const totalItem = Math.round(unitPrice * qty * 100) / 100;
-
-            // CORREÇÃO DESCRIPTION: Garante que o campo description nunca seja nulo.
-            const itemDescription = String(it.description || (product ? product.nome : 'Produto não cadastrado')).trim();
-
-            if (product) {
-                // Atualiza estoque (assumindo que o campo é 'estoque')
-                product.estoque = Math.max(0, (product.estoque || 0) - qty);
-                await product.save();
-            }
-
-            totalAmount += totalItem;
-            
-            return {
-                product: it.product || null,
-                description: itemDescription, 
-                quantity: qty,
-                unitPrice,
-                total: totalItem, 
-            };
-        }));
-        
-        totalAmount = Math.round(totalAmount * 100) / 100;
-
-        // --- 2. SALVAR VENDA ---
-        const sale = new Sale({
-            client,
-            items: processedItems,
-            totalAmount, 
-            paymentType, 
-        });
-
-        await sale.save();
-
-        // --- 3. INTEGRAÇÃO COM A AGENDA (PARCELAMENTO - CARNÊ/PARCELADO) ---
-        // Verifica se o pagamento é parcelado (usando 'carnê' ou 'parcelado')
-        if (paymentType === 'carnê' || paymentType === 'parcelado') { 
-            const numInstallments = Number(installmentsCount);
-            const firstDate = new Date(firstDueDate);
-
-            if (!numInstallments || numInstallments <= 0 || isNaN(firstDate.getTime())) {
-                 console.warn(`[AGENDA] Dados de parcelamento inválidos. Lembretes não criados.`);
-            } else {
-                const installmentValue = Math.round((totalAmount / numInstallments) * 100) / 100;
-
-                for (let i = 0; i < numInstallments; i++) {
-                    const dueDate = new Date(firstDate);
-                    dueDate.setMonth(firstDate.getMonth() + i); 
-                    
-                    const reminder = new Agenda({
-                        client: sale.client,
-                        sale: sale._id,
-                        dueDate: dueDate, 
-                        amount: installmentValue, 
-                        description: `Parcela ${i + 1}/${numInstallments} - Venda #${sale._id.toString().slice(-5)}`,
-                        status: 'Em aberto'
-                    });
-                    await reminder.save();
-                }
-                console.log(`[AGENDA] ${numInstallments} lembretes de parcelas criados.`);
-            }
-        }
-        
-        // --- 4. RETORNO ---
-        res.status(201).json(sale);
-
-    } catch (err) {
-        console.error("ERRO CRÍTICO AO CRIAR VENDA:", err);
-        let errorMessage = err.message || "Erro interno ao processar a venda.";
-        if (err.name === 'ValidationError') {
-            errorMessage = Object.values(err.errors).map(val => val.message).join('; ');
-        }
-        res.status(400).json({ error: errorMessage });
+    // Se veio items, calcula total a partir deles
+    let total = 0;
+    if (Array.isArray(body.items) && body.items.length) {
+      total = body.items.reduce((s, it) => {
+        const unidade = Number(it.unitPrice || it.unit_price || it.price || 0);
+        const qtd = Number(it.quantity || it.qtty || 0);
+        return s + (unidade * qtd);
+      }, 0);
+      // arredonda para 2 casas
+      total = Math.round(total * 100) / 100;
+    } else {
+      // se veio total (como número), usa; se veio string formatada, tenta parsear
+      if (typeof body.total === "number") total = body.total;
+      else if (typeof body.total === "string") {
+        const parsed = Number(body.total.replace(/[^\d.-]/g, "").replace(",", "."));
+        total = isNaN(parsed) ? 0 : parsed;
+      }
     }
+
+    if (!total || total <= 0) {
+      // permitir total zero só se você quiser; aqui vamos exigir >0
+      return res.status(400).json({ error: "Total inválido ou não informado" });
+    }
+
+    // tipo de pagamento - mapear possíveis valores vindos do front
+    let tipoPagamento = body.tipo_pagamento || body.paymentType || body.payment_type || "";
+    tipoPagamento = String(tipoPagamento).toLowerCase();
+
+    // mapear variantes para os valores do schema ("à vista" ou "parcelado")
+    if (["avista", "pix", "dinheiro", "cartao", "cartão", "cartao_venda"].includes(tipoPagamento)) {
+      tipoPagamento = "à vista";
+    } else if (tipoPagamento.includes("parcel")) {
+      tipoPagamento = "parcelado";
+    } else {
+      // fallback: se não souber, assume à vista
+      tipoPagamento = tipoPagamento ? tipoPagamento : "à vista";
+    }
+
+    // Parcelas: se houve installmentsCount/parcelas e tipo parcelado, gerar
+    let parcelasArr = [];
+    const parcelasCount = Number(body.parcelas || body.installmentsCount || body.installments || 0);
+    const primeiraVenc = body.primeira_vencimento || body.firstDueDate || body.first_due_date || body.primeiroVencimento;
+
+    if (tipoPagamento === "parcelado") {
+      if (!parcelasCount || parcelasCount <= 0) {
+        return res.status(400).json({ error: "Quantidade de parcelas inválida para pagamento parcelado" });
+      }
+      if (!primeiraVenc) {
+        return res.status(400).json({ error: "primeira_vencimento (ou firstDueDate) é obrigatório para parcelado" });
+      }
+      parcelasArr = gerarParcelas(total, parcelasCount, primeiraVenc);
+    }
+
+    // Monta o documento Venda conforme o schema
+    const venda = new Venda({
+      cliente_id: clienteId,
+      total,
+      tipo_pagamento: tipoPagamento,
+      parcelas: parcelasArr,
+      status: "aberta",
+    });
+
+    // Salva no Mongo
+    await venda.save();
+
+    // Agendar cobranças se for parcelado
+    if (tipoPagamento === "parcelado" && venda.parcelas && venda.parcelas.length) {
+      for (const p of venda.parcelas) {
+        // agendarCobranca deve lidar com argumentos (vendaId, numeroParcela, vencimento)
+        try {
+          await agendarCobranca(venda._id, p.numero, p.vencimento);
+        } catch (errAg) {
+          console.error("Erro ao agendar cobrança parcela:", errAg);
+        }
+      }
+    }
+
+    // Responder com estrutura útil para o front (compatibilidade)
+    return res.json({
+      ok: true,
+      venda,
+      // campos auxiliares que seu front espera
+      client: String(venda.cliente_id),
+      totalAmount: venda.total,
+      vendaId: String(venda._id),
+    });
+
+  } catch (err) {
+    console.error("POST /api/vendas error:", err);
+    return res.status(500).json({ error: err.message || "Erro interno" });
+  }
 });
 
 export default router;
