@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Produtos - Beta Investimentos</title>
+  <title>Cadastro de Produtos - Beta Investimentos</title>
   <style>
     body {
       background: #111;
@@ -124,7 +124,8 @@
     <form id="formProduto">
       <input type="hidden" id="produtoId">
       <input type="text" id="nome" placeholder="Nome do Produto" required>
-      <input type="number" id="preco" step="0.01" placeholder="Preço (R$)" required>
+      <input type="number" id="precoCusto" step="0.01" placeholder="Preço de Custo (R$)" required>
+      <input type="number" id="precoVenda" step="0.01" placeholder="Preço de Venda (R$)" required>
       <input type="number" id="desconto" min="0" max="100" placeholder="Desconto (%)">
       <input type="number" id="estoque" placeholder="Estoque">
       <input type="text" id="foto" placeholder="URL da Foto (opcional)">
@@ -145,13 +146,16 @@
         ul.innerHTML = "";
 
         produtos.forEach(p => {
+          const lucro = (p.precoVenda - p.precoCusto).toFixed(2);
           const li = document.createElement("li");
           li.innerHTML = `
             <div class="produto-info">
               <img src="${p.foto || 'https://via.placeholder.com/60x60?text=Foto'}">
               <div>
                 <strong>${p.nome}</strong><br>
-                R$ ${p.preco.toFixed(2)} ${p.desconto ? `<span style='color:green;'>(-${p.desconto}%)</span>` : ""}<br>
+                <span>Venda: R$ ${p.precoVenda.toFixed(2)}</span><br>
+                <span>Custo: R$ ${p.precoCusto.toFixed(2)}</span><br>
+                <span style="color: #4CAF50;">Lucro: R$ ${lucro}</span><br>
                 Estoque: ${p.estoque}
               </div>
             </div>
@@ -170,7 +174,8 @@
     function editar(p) {
       document.getElementById("produtoId").value = p._id;
       document.getElementById("nome").value = p.nome;
-      document.getElementById("preco").value = p.preco;
+      document.getElementById("precoCusto").value = p.precoCusto;
+      document.getElementById("precoVenda").value = p.precoVenda;
       document.getElementById("desconto").value = p.desconto;
       document.getElementById("estoque").value = p.estoque;
       document.getElementById("foto").value = p.foto || "";
@@ -187,7 +192,8 @@
       const id = document.getElementById("produtoId").value;
       const produto = {
         nome: document.getElementById("nome").value,
-        preco: parseFloat(document.getElementById("preco").value),
+        precoCusto: parseFloat(document.getElementById("precoCusto").value),
+        precoVenda: parseFloat(document.getElementById("precoVenda").value),
         desconto: parseFloat(document.getElementById("desconto").value) || 0,
         estoque: parseInt(document.getElementById("estoque").value) || 0,
         foto: document.getElementById("foto").value

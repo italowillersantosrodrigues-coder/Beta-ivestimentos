@@ -11,19 +11,24 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    precoCusto: {
+      type: Number,
+      default: 0, // preço que você paga no produto
+    },
+    precoVenda: {
+      type: Number,
+      default: 0, // preço que você vende
+    },
     preco: {
       type: Number,
-      required: true,
-      default: 0,
+      default: 0, // campo legado usado antes — mantém compatibilidade
     },
     desconto: {
       type: Number,
-      required: false,
       default: 0,
     },
     estoque: {
       type: Number,
-      required: true,
       default: 0,
     },
     foto: {
@@ -31,7 +36,11 @@ const productSchema = new mongoose.Schema(
       required: false,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    collection: "produtos", // mantém a mesma coleção
+  }
 );
 
-export default mongoose.model("Produto", productSchema);
+// Garante que o model não seja recriado
+export default mongoose.models.Produto || mongoose.model("Produto", productSchema);

@@ -25,6 +25,9 @@ import reportsRouter from "./routes/reports.js";
 import monitorRouter from "./routes/monitor.js";
 import templatesRouter from "./routes/templates.js";
 
+// ====== NOVA ROTA ADICIONADA (AGENDA) ======
+import agendaRouter from "./routes/agenda.js";
+
 // ===== Importa watcher (criar src/services/vendaWatcher.js conforme instruções) =====
 import startVendaWatcher from "./services/vendaWatcher.js";
 
@@ -141,6 +144,9 @@ app.use("/api/relatorios", reportsRouter);
 app.use("/api/monitor", monitorRouter);
 app.use("/api/templates", templatesRouter);
 
+// ====== NOVA LINHA ADICIONADA ======
+app.use("/api/agenda", agendaRouter);
+
 // =================== PERFIL ===================
 app.get("/api/perfil", autenticarToken, async (req, res) => {
   try {
@@ -197,8 +203,8 @@ try {
   io = new IOServer(server, {
     cors: {
       origin: process.env.FRONTEND_ORIGIN || "*",
-      methods: ["GET", "POST"]
-    }
+      methods: ["GET", "POST"],
+    },
   });
   // disponibiliza io para outras partes da app via app.get('io')
   app.set("io", io);

@@ -1,140 +1,152 @@
-// routes/reports.js
+// src/routes/reports.js
 import express from 'express';
-import mongoose from 'mongoose';
-
 const router = express.Router();
 
-function parseDateInput(s, endOfDay = false) {
-  if (!s) return null;
-  const d = new Date(s);
-  if (isNaN(d)) return null;
-  if (endOfDay) d.setHours(23, 59, 59, 999);
-  else d.setHours(0, 0, 0, 0);
-  return d;
+// Usamos mongoose.connection diretamente (só leitura) para evitar dependência estrita de modelos
+import mongoose from 'mongoose';
+
+function parseRange(from, to) {
+  const f = from ? new Date(from) : null;
+  const t = to ? new Date(to) : null;
+  if (t) t.setHours(23,59,59,999);
+  return { f, t };
 }
 
-// === /api/relatorios/summary ===
+// GET /api/relatorios/summary?from=YYYY-MM-DD&to=YYYY-MM-DD&granularity=day|week|month
 router.get('/summary', async (req, res) => {
   try {
-    const from = parseDateInput(req.query.from) || new Date(Date.now() - 1000 * 60 * 60 * 24 * 29);
-    const to = parseDateInput(req.query.to, true) || new Date();
-    const gran = req.query.granularity || 'month';
-    const unit = gran === 'month' ? 'month' : gran === 'week' ? 'week' : 'day';
-    const coll = mongoose.connection.collection('sales');
+    const { from, to, granularity = 'month' } = req.query;
+    const { f, t } = parseRange(from, to);
+    const match = {};
+    if (f) match.criado_em = { $gte: f };
+    if (t) match.criado_em = Object.assign(match.criado_em || {}, { $lte: t });
 
-    const pipeline = [
-      { $match: { criado_em: { $gte: from, $lte: to }, status: { $ne: 'cancelado' } } },
-      { $addFields: { periodo: { $dateTrunc: { date: '$criado_em', unit, timezone: 'America/Sao_Paulo' } } } },
-      { $group: { _id: '$periodo', total_vendas: { $sum: 1 }, receita: { $sum: { $ifNull: ['$total', 0] } } } },
-      { $sort: { _id: 1 } },
-    ];
+    const db = mongoose.connection.db;
+    const coll = db.collection('vendas');
 
-    const byPeriod = await coll.aggregate(pipeline).toArray();
-
+    // total vendas e receita
     const totals = await coll.aggregate([
-      { $match: { criado_em: { $gte: from, $lte: to }, status: { $ne: 'cancelado' } } },
-      { $group: { _id: null, total_vendas: { $sum: 1 }, receita: { $sum: { $ifNull: ['$total', 0] } } } },
+      { $match: match },
+      { $group: { _id: null, total_vendas: { $sum: 1 }, receita: { $sum: { $ifNull: ["$total", 0] } } } }
     ]).toArray();
 
-    const total = totals[0] || { total_vendas: 0, receita: 0 };
-    const best = byPeriod.length ? byPeriod.reduce((a, b) => (b.receita > a.receita ? b : a)) : null;
+    const total_vendas = totals[0]?.total_vendas || 0;
+    const receita = totals[0]?.receita || 0;
 
-    res.json({
-      total_vendas: total.total_vendas,
-      receita: total.receita,
-      byPeriod: byPeriod.map(r => ({
-        periodo: r._id,
-        total_vendas: r.total_vendas,
-        receita: r.receita,
-      })),
-      bestPeriodLabel: best ? new Date(best._id).toLocaleString('pt-BR') : '—',
+    // aggregate per period
+    let groupId;
+    if (granularity === 'day') {
+      groupId = { year: { $year: "$criado_em" }, month: { $month: "$criado_em" }, day: { $dayOfMonth: "$criado_em" } };
+    } else if (granularity === 'week') {
+      groupId = { year: { $isoWeekYear: "$criado_em" }, week: { $isoWeek: "$criado_em" } };
+    } else {
+      groupId = { year: { $year: "$criado_em" }, month: { $month: "$criado_em" } };
+    }
+
+    const byPeriodRaw = await coll.aggregate([
+      { $match: match },
+      { $group: { _id: groupId, receita: { $sum: { $ifNull: ["$total", 0] } }, count: { $sum: 1 } } },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.week": 1, "_id.day": 1 } }
+    ]).toArray();
+
+    const byPeriod = byPeriodRaw.map(r => {
+      let periodo;
+      if (granularity === 'day') periodo = new Date(r._id.year, r._id.month - 1, r._id.day).toISOString();
+      else if (granularity === 'week') {
+        const year = r._id.year, week = r._id.week;
+        const simple = new Date(year, 0, 1 + (week - 1) * 7);
+        periodo = simple.toISOString();
+      } else periodo = new Date(r._id.year, r._id.month - 1, 1).toISOString();
+      return { periodo, receita: r.receita, count: r.count };
     });
+
+    // best period label
+    const bestRow = byPeriod.reduce((a,b) => (b.receita > (a?.receita||0) ? b : a), null);
+    const bestPeriodLabel = bestRow ? new Date(bestRow.periodo).toLocaleDateString('pt-BR') : null;
+
+    res.json({ total_vendas, receita, byPeriod, bestPeriodLabel });
   } catch (err) {
-    console.error('GET /api/relatorios/summary error', err);
-    res.status(500).json({ error: 'Erro ao gerar resumo' });
+    console.error('reports summary error', err);
+    res.status(500).json({ error: 'erro interno' });
   }
 });
 
-// === /api/relatorios/by-product ===
+// GET /api/relatorios/by-product?from=...&to=...&top=10
 router.get('/by-product', async (req, res) => {
   try {
-    const from = parseDateInput(req.query.from) || new Date(Date.now() - 1000 * 60 * 60 * 24 * 29);
-    const to = parseDateInput(req.query.to, true) || new Date();
-    const top = parseInt(req.query.top, 10) || 10;
+    const { from, to, top = 10 } = req.query;
+    const { f, t } = parseRange(from, to);
+    const match = {};
+    if (f) match.criado_em = { $gte: f };
+    if (t) match.criado_em = Object.assign(match.criado_em || {}, { $lte: t });
 
-    const coll = mongoose.connection.collection('sales');
+    const db = mongoose.connection.db;
+    const coll = db.collection('vendas');
 
-    const pipeline = [
-      { $match: { criado_em: { $gte: from, $lte: to }, status: { $ne: 'cancelado' } } },
-      { $unwind: '$produtos' },
-      {
-        $group: {
-          _id: '$produtos.nome',
-          unidades: { $sum: { $ifNull: ['$produtos.quantidade', 0] } },
-          receita: { $sum: { $ifNull: ['$produtos.total', 0] } },
-        },
-      },
+    // espera campo "itens" em cada venda (se tiver outro nome, adaptar)
+    const rows = await coll.aggregate([
+      { $match: match },
+      { $unwind: "$itens" },
+      { $group: { _id: "$itens.produto", receita: { $sum: "$itens.total" }, quantidade: { $sum: "$itens.quantidade" } } },
       { $sort: { receita: -1 } },
-      { $limit: top },
-    ];
+      { $limit: Number(top) }
+    ]).toArray();
 
-    const rows = await coll.aggregate(pipeline).toArray();
     res.json({ rows });
   } catch (err) {
-    console.error('GET /api/relatorios/by-product error', err);
-    res.status(500).json({ error: 'Erro ao gerar por produto' });
+    console.error('reports by-product error', err);
+    res.status(500).json({ error: 'erro interno' });
   }
 });
 
-// === /api/relatorios/by-client ===
+// GET /api/relatorios/by-client?from=...&to=...&top=10
 router.get('/by-client', async (req, res) => {
   try {
-    const from = parseDateInput(req.query.from) || new Date(Date.now() - 1000 * 60 * 60 * 24 * 29);
-    const to = parseDateInput(req.query.to, true) || new Date();
-    const top = parseInt(req.query.top, 10) || 10;
+    const { from, to, top = 10 } = req.query;
+    const { f, t } = parseRange(from, to);
+    const match = {};
+    if (f) match.criado_em = { $gte: f };
+    if (t) match.criado_em = Object.assign(match.criado_em || {}, { $lte: t });
 
-    const coll = mongoose.connection.collection('sales');
+    const db = mongoose.connection.db;
+    const coll = db.collection('vendas');
 
-    const pipeline = [
-      { $match: { criado_em: { $gte: from, $lte: to }, status: { $ne: 'cancelado' } } },
-      {
-        $group: {
-          _id: '$cliente',
-          total_vendas: { $sum: 1 },
-          receita: { $sum: { $ifNull: ['$total', 0] } },
-        },
-      },
+    const rows = await coll.aggregate([
+      { $match: match },
+      { $group: { _id: "$cliente", receita: { $sum: { $ifNull: ["$total", 0] } }, count: { $sum: 1 } } },
       { $sort: { receita: -1 } },
-      { $limit: top },
-    ];
+      { $limit: Number(top) }
+    ]).toArray();
 
-    const rows = await coll.aggregate(pipeline).toArray();
     res.json({ rows });
   } catch (err) {
-    console.error('GET /api/relatorios/by-client error', err);
-    res.status(500).json({ error: 'Erro ao gerar por cliente' });
+    console.error('reports by-client error', err);
+    res.status(500).json({ error: 'erro interno' });
   }
 });
 
-// === /api/relatorios/list ===
+// GET /api/relatorios/list?from=...&to=...&page=1&limit=50
 router.get('/list', async (req, res) => {
   try {
-    const from = parseDateInput(req.query.from) || new Date(Date.now() - 1000 * 60 * 60 * 24 * 29);
-    const to = parseDateInput(req.query.to, true) || new Date();
-    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const limit = Math.min(1000, parseInt(req.query.limit, 10) || 50);
+    const { from, to, page = 1, limit = 50 } = req.query;
+    const { f, t } = parseRange(from, to);
+    const match = {};
+    if (f) match.criado_em = { $gte: f };
+    if (t) match.criado_em = Object.assign(match.criado_em || {}, { $lte: t });
 
-    const coll = mongoose.connection.collection('sales');
+    const db = mongoose.connection.db;
+    const coll = db.collection('vendas');
 
-    const filter = { criado_em: { $gte: from, $lte: to } };
+    const pageNum = Math.max(1, parseInt(page));
+    const lim = Math.max(1, Math.min(1000, parseInt(limit)));
 
-    const total = await coll.countDocuments(filter);
-    const vendas = await coll.find(filter).sort({ criado_em: -1 }).skip((page - 1) * limit).limit(limit).toArray();
+    const cursor = coll.find(match).sort({ criado_em: -1 }).skip((pageNum-1)*lim).limit(lim);
+    const vendas = await cursor.toArray();
 
-    res.json({ total, page, limit, vendas });
+    res.json({ page: pageNum, limit: lim, vendas });
   } catch (err) {
-    console.error('GET /api/relatorios/list error', err);
-    res.status(500).json({ error: 'Erro ao listar vendas' });
+    console.error('reports list error', err);
+    res.status(500).json({ error: 'erro interno' });
   }
 });
 
