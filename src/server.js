@@ -34,6 +34,9 @@ import startVendaWatcher from "./services/vendaWatcher.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+import relatorioLucroRouter from "./routes/relatorioLucro.js";
+app.use("/api/relatorio-lucro", relatorioLucroRouter);
+
 // ================= MIDDLEWARES =================
 app.use(
   helmet({

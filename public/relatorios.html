@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <title>Relatórios Avançados - Beta Investimentos</title>
+  <title>Relatórios Avançados - Beta Investimentos (Corrigido)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3"></script>
@@ -10,9 +10,10 @@
     /* Pequenas customizações */
     .card { background: #0f1724; border-radius: .5rem; padding: 1rem; }
     .muted { color: #9ca3af; }
-    #saleDetail { position: fixed; right: 0; top: 0; height: 100%; width: 360px; background:#0b1220; box-shadow: -6px 0 24px rgba(0,0,0,.6); transform: translateX(101%); transition: transform .22s; z-index: 50; padding: 1rem; overflow:auto; }
+    #saleDetail { position: fixed; right: 0; top: 0; height: 100%; width: 420px; background:#0b1220; box-shadow: -6px 0 24px rgba(0,0,0,.6); transform: translateX(101%); transition: transform .22s; z-index: 50; padding: 1rem; overflow:auto; }
     #saleDetail.open { transform: translateX(0); }
     .clickable-row { cursor: pointer; }
+    .badge { background:#111827; padding:.125rem .5rem; border-radius:.375rem; }
   </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen">
@@ -56,6 +57,33 @@
       <div class="text-xs text-gray-400 mt-2">
         Observação: se "De" e "Até" estiverem vazios, por padrão serão considerados os últimos 30 dias. Para puxar todo histórico, limpe as datas e clique em Buscar novamente.
       </div>
+
+      <!-- Gastos mensais rápidos -->
+      <div class="mt-4 p-3 rounded bg-gray-900/40">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="font-semibold">Gastos / Compras</h4>
+            <div class="text-xs text-gray-400">Adicione manualmente compras, fretes e outros gastos. Serão subtraídos do lucro no intervalo selecionado.</div>
+          </div>
+          <div>
+            <button id="btnToggleExpenses" class="px-2 py-1 rounded bg-gray-700">Mostrar/Ocultar</button>
+          </div>
+        </div>
+        <div id="expensesPanel" class="mt-3 hidden">
+          <div id="expensesList" class="max-h-40 overflow-auto mb-2 text-sm"></div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <input id="expDate" type="date" class="p-2 rounded bg-gray-700 text-gray-200" />
+            <input id="expCategory" placeholder="Categoria (compra/frete)" class="p-2 rounded bg-gray-700 text-gray-200" />
+            <input id="expDesc" placeholder="Descrição" class="p-2 rounded bg-gray-700 text-gray-200" />
+            <input id="expAmount" placeholder="R$ 0,00" type="number" step="0.01" class="p-2 rounded bg-gray-700 text-gray-200" />
+            <div class="md:col-span-4 flex gap-2 mt-2">
+              <button id="btnAddExpense" class="px-3 py-1 rounded bg-green-600">Adicionar gasto</button>
+              <button id="btnClearExpenses" class="px-3 py-1 rounded bg-gray-700">Limpar todos (local)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </section>
 
     <!-- cards -->
@@ -69,16 +97,16 @@
         <div id="cardReceita" class="text-2xl font-bold">R$ 0,00</div>
       </div>
       <div class="card md:col-span-1">
-        <div class="muted">Lucro bruto</div>
+        <div class="muted">Lucro (vendas - gastos)</div>
         <div id="cardLucro" class="text-2xl font-bold text-green-400">R$ 0,00</div>
+      </div>
+      <div class="card md:col-span-1">
+        <div class="muted">Gastos no período</div>
+        <div id="cardGastos" class="text-2xl font-bold text-red-400">R$ 0,00</div>
       </div>
       <div class="card md:col-span-1">
         <div class="muted">Ticket médio</div>
         <div id="cardTicket" class="text-2xl font-bold">R$ 0,00</div>
-      </div>
-      <div class="card md:col-span-1">
-        <div class="muted">Melhor período</div>
-        <div id="cardMelhor" class="text-2xl font-bold">—</div>
       </div>
       <div class="card md:col-span-1">
         <div class="muted">Top produto</div>
@@ -122,7 +150,7 @@
       <div class="overflow-auto">
         <table class="w-full text-left text-sm">
           <thead class="text-gray-300">
-            <tr><th>#</th><th>Cliente</th><th>Produto(s)</th><th>Total</th><th>Tipo</th><th>Data</th></tr>
+            <tr><th>#</th><th>Cliente</th><th>Produto(s)</th><th>Total</th><th>Lucro</th><th>Tipo</th><th>Data</th></tr>
           </thead>
           <tbody id="salesBody" class="text-gray-200"></tbody>
         </table>
@@ -149,6 +177,7 @@
     <div id="detailContent" class="mt-4 space-y-2"></div>
   </aside>
 
+  <!-- include external JS -->
   <script src="/js/relatorios_advanced.js"></script>
 </body>
 </html>

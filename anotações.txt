@@ -6,7 +6,7 @@ npm install express cors body-parser sqlite3 nodemailer
 
 git status
 git add .
-git commit -m "atualização relatorios"
+git commit -m "atualização relatorios2"
 git push origin main
 
 
